@@ -21,20 +21,22 @@ typedef struct i2c_task_t_ {
   i2c_callback_t callback;
   void *data;
   uint8_t address;
-  struct i2c_task_t_ *next;
 } i2c_task_t;
 
 
 typedef struct i2c_queue_t_ {
-  i2c_task_t *current;
-  i2c_task_t *last;
   uint8_t buffer_storage[I2C_BUFFER_SIZE];
   ring_buffer_t buffer;
+  i2c_task_t tasks_storage[I2C_QUEUE_SIZE];
+  ring_buffer_t tasks;
 } i2c_queue_t;
 
 
 static i2c_queue_t I2C_QUEUE = { 0 };
 static volatile uint16_t QUEUE_LEN = 0;
+
+
+#define assert_interrupts_disabled() assert((SREG & _BV(SREG_I)) == 0)
 
 
 /* Low level hardware operations -------------------------------------------- */
@@ -73,9 +75,10 @@ i2c_hw_go_idle(void)
 static void
 i2c_queue_fetch_commands(void)
 {
-  assert((SREG & _BV(SREG_I)) == 0);
+  assert_interrupts_disabled();
 
-  i2c_task_t *task = I2C_QUEUE.current;
+  i2c_task_t *task = (i2c_task_t *) ring_buffer_get_first(&(I2C_QUEUE.tasks));
+  //~ i2c_task_t *task = (i2c_task_t *) I2C_QUEUE.tasks.read_pointer;
 
   task->callback(task->data);
 }
@@ -84,7 +87,7 @@ i2c_queue_fetch_commands(void)
 static void
 i2c_queue_start_task(void)
 {
-  assert((SREG & _BV(SREG_I)) == 0);
+  assert_interrupts_disabled();
 
   i2c_hw_send_start_condition();
 
@@ -96,57 +99,33 @@ i2c_queue_start_task(void)
 static void
 i2c_queue_end_task(void)
 {
-  assert((SREG & _BV(SREG_I)) == 0);
+  assert_interrupts_disabled();
 
   i2c_hw_send_stop_condition();
   assert(ring_buffer_get_size(&(I2C_QUEUE.buffer)) == 0);
 
-  i2c_task_t *old_current = I2C_QUEUE.current;
-  I2C_QUEUE.current = old_current->next;
+  ring_buffer_discard(&(I2C_QUEUE.tasks));
 
-  --QUEUE_LEN;
-  PORTD = ~(0xff << QUEUE_LEN);
+  uint8_t tasks_n = I2C_QUEUE.tasks.elements_n; // ring_buffer_get_size(&(I2C_QUEUE.tasks));
+  PORTD = ~(0xff << tasks_n);
 
-  if (I2C_QUEUE.current == NULL) {
-    I2C_QUEUE.last = NULL;
+  if (tasks_n == 0) {
     i2c_hw_go_idle();
   }
   else {
     /* Start new transmission */
     i2c_queue_start_task();
   }
-
-  free(old_current);
-}
-
-
-static void
-i2c_queue_push_task(i2c_task_t *task)
-{
-  assert((SREG & _BV(SREG_I)) == 0);
-
-  ++QUEUE_LEN;
-  PORTD = ~(0xff << QUEUE_LEN);
-
-  if (I2C_QUEUE.current == NULL) {
-    I2C_QUEUE.current = task;
-
-    i2c_queue_start_task();
-  }
-  else {
-    I2C_QUEUE.last->next = task;
-  }
-
-  I2C_QUEUE.last = task;
 }
 
 
 static void
 i2c_queue_send_sla(void)
 {
-  assert((SREG & _BV(SREG_I)) == 0);
+  assert_interrupts_disabled();
 
-  i2c_task_t *task = I2C_QUEUE.current;
+  i2c_task_t *task = (i2c_task_t *) ring_buffer_get_first(&(I2C_QUEUE.tasks));
+  //~ i2c_task_t *task = (i2c_task_t *) I2C_QUEUE.tasks.read_pointer;
 
   i2c_hw_send_byte(task->address);
 }
@@ -155,7 +134,7 @@ i2c_queue_send_sla(void)
 static void
 i2c_queue_process_command(void)
 {
-  assert((SREG & _BV(SREG_I)) == 0);
+  assert_interrupts_disabled();
 
   uint8_t command_code = ring_buffer_pop_byte(&(I2C_QUEUE.buffer));
 
@@ -208,9 +187,19 @@ ISR(TWI_vect) {
 
 void i2c_init(void)
 {
-  I2C_QUEUE.current = NULL;
-  I2C_QUEUE.last = NULL;
-  ring_buffer_init(&(I2C_QUEUE.buffer), I2C_QUEUE.buffer_storage, sizeof(I2C_QUEUE.buffer_storage));
+  ring_buffer_init(
+    &(I2C_QUEUE.buffer),
+    I2C_QUEUE.buffer_storage, /* storage */
+    1, /* element_size */
+    sizeof(I2C_QUEUE.buffer_storage) /* elements_max */
+  );
+
+  ring_buffer_init(
+    &(I2C_QUEUE.tasks),
+    I2C_QUEUE.tasks_storage, /* storage */
+    sizeof(i2c_task_t), /* element_size */
+    sizeof(I2C_QUEUE.tasks_storage) / sizeof(i2c_task_t) /* elements_max */
+  );
 
   TWSR = 0x00;
   TWCR = 0x00;
@@ -223,15 +212,21 @@ void i2c_init(void)
 void
 i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
 {
-  i2c_task_t *task = (i2c_task_t *) malloc(sizeof(i2c_task_t));
-
-  task->address = address;
-  task->callback = callback;
-  task->data = data;
-  task->next = NULL;
-
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    i2c_queue_push_task(task);
+    i2c_task_t *task = (i2c_task_t *) ring_buffer_append(&(I2C_QUEUE.tasks));
+
+    task->address = address;
+    task->callback = callback;
+    task->data = data;
+
+    uint8_t tasks_n = I2C_QUEUE.tasks.elements_n; // ring_buffer_get_size(&(I2C_QUEUE.tasks));
+
+    PORTD = ~(0xff << tasks_n);
+
+    if (tasks_n == 1) {
+      /* There were no tasks prior to this one, we must start transmission */
+      i2c_queue_start_task();
+    }
   }
 }
 

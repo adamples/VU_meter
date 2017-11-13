@@ -7,6 +7,7 @@ TARGET=main
 
 C_SRC= \
 $(TARGET).c \
+lcd.c \
 fault.c \
 ring_buffer.c \
 i2c.c \
@@ -39,28 +40,13 @@ CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror
 CFLAGS+=-std=c99
-CFLAGS+=-g
 #CFLAGS+=-DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
-#CFLAGS+=-mshort-calls
 CFLAGS+=-frename-registers
-#CFLAGS+=-fverbose-asm
+CFLAGS+=-g
 CFLAGS+=-Wa,-ahlmsd=$(<:.c=.lst)
-# -a[cdghlmns]
-#		 Turn on listings, in any of a variety of ways:
-#		 -ac omit false conditionals
-#		 -ad omit debugging directives
-#		 -ag include general information, like as version and options passed
-#		 -ah include high-level source
-#		 -al include assembly
-#		 -am include macro expansions
-#		 -an omit forms processing
-#		 -as include symbols
-#		 =file
-#				 set the name of the listing file
-
 
 
 LDFLAGS+=-mmcu=$(MCU)

@@ -6,6 +6,7 @@
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 #include "assert.h"
+#include "lcd.h"
 #include "images.h"
 #include "ssd1306.h"
 
@@ -149,6 +150,8 @@ int main(void)
   };
 
   i2c_init();
+  lcd_init();
+  lcd_puts("Started");
   sei();
 
   i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
