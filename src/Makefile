@@ -83,7 +83,7 @@ $(TARGET): $(OBJS)
 %.hex: %
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
-%.o: %.c
+%.o: %.c Makefile
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c $< -o $@
 
 
