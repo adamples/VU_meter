@@ -3,12 +3,6 @@
 #include "assert.h"
 
 
-#define assert_can_read_n_elements(buffer, n) \
-  assert((buffer)->elements_n >= (n))
-
-#define assert_can_write_n_elements(buffer, n) \
-  assert((buffer)->elements_n + (n) <= (buffer)->elements_max)
-
 #define assert_is_byte_buffer(buffer) \
   assert((buffer)->element_size == 1)
 
@@ -33,6 +27,13 @@ ring_buffer_clear(ring_buffer_t *buffer)
 }
 
 
+bool
+ring_buffer_is_empty(ring_buffer_t *buffer)
+{
+  return buffer->write_pointer == buffer->read_pointer;
+}
+
+
 uint8_t
 ring_buffer_get_size(ring_buffer_t *buffer)
 {
@@ -54,7 +55,7 @@ void
 ring_buffer_push_byte(ring_buffer_t *buffer, uint8_t byte)
 {
   assert_is_byte_buffer(buffer);
-  assert_can_write_n_elements(buffer, 1);
+  ring_buffer_assert_can_write_n_elements(buffer, 1);
 
   uint8_t *byte_write_pointer = (uint8_t *) (buffer->write_pointer);
 
@@ -71,7 +72,7 @@ ring_buffer_pop_byte(ring_buffer_t *buffer)
   uint8_t result = *(byte_read_pointer);
 
   assert_is_byte_buffer(buffer);
-  assert_can_read_n_elements(buffer, 1);
+  ring_buffer_assert_can_read_n_elements(buffer, 1);
 
   ring_buffer_advance_pointer(buffer, &(buffer->read_pointer));
 
@@ -83,7 +84,7 @@ ring_buffer_pop_byte(ring_buffer_t *buffer)
 void
 ring_buffer_push(ring_buffer_t *buffer, void *element)
 {
-  assert_can_write_n_elements(buffer, 1);
+  ring_buffer_assert_can_write_n_elements(buffer, 1);
 
   memcpy(buffer->write_pointer, element, buffer->element_size);
   ring_buffer_advance_pointer(buffer, &(buffer->write_pointer));
@@ -94,7 +95,7 @@ ring_buffer_push(ring_buffer_t *buffer, void *element)
 void
 ring_buffer_pop(ring_buffer_t *buffer, void *data)
 {
-  assert_can_read_n_elements(buffer, 1);
+  ring_buffer_assert_can_read_n_elements(buffer, 1);
 
   memcpy(data, buffer->read_pointer, buffer->element_size);
   ring_buffer_advance_pointer(buffer, &(buffer->read_pointer));
@@ -106,7 +107,7 @@ void
 ring_buffer_push_bytes(ring_buffer_t *buffer, uint8_t *bytes, uint8_t n)
 {
   assert_is_byte_buffer(buffer);
-  assert_can_read_n_elements(buffer, n);
+  ring_buffer_assert_can_read_n_elements(buffer, n);
 
   uint8_t elements_wo_folding = buffer->elements_max - (buffer->write_pointer - buffer->storage);
 
@@ -128,7 +129,7 @@ ring_buffer_push_bytes(ring_buffer_t *buffer, uint8_t *bytes, uint8_t n)
 inline void *
 ring_buffer_get_first(ring_buffer_t *buffer)
 {
-  assert_can_read_n_elements(buffer, 1);
+  ring_buffer_assert_can_read_n_elements(buffer, 1);
 
   return buffer->read_pointer;
 }
@@ -137,7 +138,7 @@ ring_buffer_get_first(ring_buffer_t *buffer)
 inline void *
 ring_buffer_get_last(ring_buffer_t *buffer)
 {
-  assert_can_read_n_elements(buffer, 1);
+  ring_buffer_assert_can_read_n_elements(buffer, 1);
 
   return buffer->write_pointer;
 }
@@ -146,7 +147,7 @@ ring_buffer_get_last(ring_buffer_t *buffer)
 void *
 ring_buffer_append(ring_buffer_t *buffer)
 {
-  assert_can_write_n_elements(buffer, 1);
+  ring_buffer_assert_can_write_n_elements(buffer, 1);
 
   void *result = buffer->write_pointer;
   ring_buffer_advance_pointer(buffer, &(buffer->write_pointer));
@@ -158,7 +159,7 @@ ring_buffer_append(ring_buffer_t *buffer)
 void
 ring_buffer_discard(ring_buffer_t *buffer)
 {
-  assert_can_read_n_elements(buffer, 1);
+  ring_buffer_assert_can_read_n_elements(buffer, 1);
 
   ring_buffer_advance_pointer(buffer, &(buffer->read_pointer));
   --buffer->elements_n;

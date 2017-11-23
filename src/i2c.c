@@ -76,6 +76,7 @@ static void
 i2c_queue_fetch_commands(void)
 {
   assert_interrupts_disabled();
+  ring_buffer_assert_can_read_n_elements(&(I2C_QUEUE.tasks), 1);
 
   i2c_task_t *task = (i2c_task_t *) ring_buffer_get_first(&(I2C_QUEUE.tasks));
   //~ i2c_task_t *task = (i2c_task_t *) I2C_QUEUE.tasks.read_pointer;
@@ -102,12 +103,11 @@ i2c_queue_end_task(void)
   assert_interrupts_disabled();
 
   i2c_hw_send_stop_condition();
-  assert(ring_buffer_get_size(&(I2C_QUEUE.buffer)) == 0);
+  assert(ring_buffer_is_empty(&(I2C_QUEUE.buffer)));
 
   ring_buffer_discard(&(I2C_QUEUE.tasks));
 
-  uint8_t tasks_n = I2C_QUEUE.tasks.elements_n; // ring_buffer_get_size(&(I2C_QUEUE.tasks));
-  PORTD = ~(0xff << tasks_n);
+  uint8_t tasks_n = I2C_QUEUE.tasks.elements_n; // ring_buffer_is_empty(&(I2C_QUEUE.tasks));
 
   if (tasks_n == 0) {
     i2c_hw_go_idle();
@@ -154,7 +154,7 @@ i2c_queue_process_command(void)
       break;
   }
 
-  if (command_code != I2C_COMMAND_STOP && ring_buffer_get_size(&(I2C_QUEUE.buffer)) == 0) {
+  if (ring_buffer_is_empty(&(I2C_QUEUE.buffer)) && command_code != I2C_COMMAND_STOP) {
     i2c_queue_fetch_commands();
   }
 }
@@ -204,8 +204,6 @@ void i2c_init(void)
   TWSR = 0x00;
   TWCR = 0x00;
   TWBR = ((F_CPU / I2C_CLOCK) - 16) / 2;
-
-  DDRD = 0xff;
 }
 
 
@@ -213,6 +211,8 @@ void
 i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
 {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    ring_buffer_assert_can_write_n_elements(&(I2C_QUEUE.tasks), 1);
+
     i2c_task_t *task = (i2c_task_t *) ring_buffer_append(&(I2C_QUEUE.tasks));
 
     task->address = address;
@@ -220,8 +220,6 @@ i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
     task->data = data;
 
     uint8_t tasks_n = I2C_QUEUE.tasks.elements_n; // ring_buffer_get_size(&(I2C_QUEUE.tasks));
-
-    PORTD = ~(0xff << tasks_n);
 
     if (tasks_n == 1) {
       /* There were no tasks prior to this one, we must start transmission */
@@ -235,6 +233,8 @@ void
 i2c_async_send_data(uint8_t data)
 {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    ring_buffer_assert_can_write_n_elements(&(I2C_QUEUE.buffer), 2);
+
     ring_buffer_push_byte(&(I2C_QUEUE.buffer), I2C_COMMAND_SEND_DATA);
     ring_buffer_push_byte(&(I2C_QUEUE.buffer), data);
   }
@@ -245,6 +245,8 @@ void
 i2c_async_send_repeated_start(void)
 {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    ring_buffer_assert_can_write_n_elements(&(I2C_QUEUE.buffer), 1);
+
     ring_buffer_push_byte(&(I2C_QUEUE.buffer), I2C_COMMAND_REPEATED_START);
   }
 }
@@ -254,8 +256,22 @@ void
 i2c_async_end_transmission(void)
 {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    ring_buffer_assert_can_write_n_elements(&(I2C_QUEUE.buffer), 1);
+
     ring_buffer_push_byte(&(I2C_QUEUE.buffer), I2C_COMMAND_STOP);
   }
+}
+
+
+bool i2c_is_idle(void)
+{
+  bool result = false;
+
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    result = ring_buffer_is_empty(&(I2C_QUEUE.tasks));
+  }
+
+  return result;
 }
 
 /* end of User API ---------------------------------------------------------- */

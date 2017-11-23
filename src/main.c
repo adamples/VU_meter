@@ -5,10 +5,15 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
+#include "config.h"
 #include "assert.h"
 #include "lcd.h"
 #include "images.h"
 #include "ssd1306.h"
+#include "display.h"
+#include "drawing.h"
+#include "benchmark.h"
+
 
 
 #define SSD1306_DEFAULT_ADDRESS 0x7a
@@ -72,72 +77,15 @@ i2c_write_const_cb(void *data)
   write_const_t *wc = (write_const_t *) data;
 
   if (wc->counter < wc->length) {
-    i2c_async_send_data(wc->data[wc->counter]);
-    ++wc->counter;
+    for (uint8_t i = 0; i < 16 && wc->counter < wc->length; ++i) {
+      i2c_async_send_data(wc->data[wc->counter]);
+      ++wc->counter;
+    }
   }
   else {
     wc->counter = 0;
     i2c_async_end_transmission();
   }
-}
-
-
-typedef struct put_image_t_ {
-  uint16_t x, y;
-  uint16_t length;
-  uint16_t counter;
-  const uint8_t *data;
-} put_image_t;
-
-
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-
-void
-ssd1306_put_image_P_cb(void *data)
-{
-  put_image_t *pi = (put_image_t *) data;
-
-  if (pi->counter == 0) {
-    uint8_t width = pgm_read_byte(pi->data);
-    uint8_t height = pgm_read_byte(pi->data + 1);
-
-    i2c_async_send_data(SSD1306_I2C_MODE_COMMAND);
-    i2c_async_send_data(SSD1306_CMD_SET_COLUMN_ADDRESS);
-    i2c_async_send_data(pi->x);
-    i2c_async_send_data(min(pi->x + width - 1, 127));
-    i2c_async_send_data(SSD1306_CMD_SET_PAGE_ADDRESS);
-    i2c_async_send_data(pi->y / 8);
-    i2c_async_send_data(min(pi->y / 8 + height / 8 - 1, 7));
-    i2c_async_send_repeated_start();
-    i2c_async_send_data(SSD1306_I2C_MODE_DATA);
-  }
-
-  if (pi->counter < pi->length) {
-    uint8_t segment = pgm_read_byte(pi->data + 2 + pi->counter);
-    i2c_async_send_data(segment);
-    ++pi->counter;
-  }
-  else {
-    i2c_async_end_transmission();
-    free(pi);
-  }
-}
-
-
-void
-ssd1306_put_image_P(uint8_t address, const uint8_t *data, uint8_t x, uint8_t y)
-{
-  put_image_t *control_block = (put_image_t *) malloc(sizeof(put_image_t));
-  uint8_t width = pgm_read_byte(data);
-  uint8_t height = pgm_read_byte(data + 1);
-
-  control_block->x = x;
-  control_block->y = y;
-  control_block->length = (uint16_t) width * height / 8;
-  control_block->counter = 0;
-  control_block->data = data;
-
-  i2c_transmit_async(address, ssd1306_put_image_P_cb, control_block);
 }
 
 
@@ -149,25 +97,65 @@ int main(void)
     .data = (uint8_t *) OLED_INIT_SEQUENCE
   };
 
-  i2c_init();
+  progmem_image_sprite_t background;
+  progmem_image_sprite_t peak_indicator;
+  needle_sprite_t needle_a;
+  ssd1306_t device_a;
+  ssd1306_t device_b;
+  display_t display_a;
+  display_t display_b;
+
   lcd_init();
+  i2c_init();
   lcd_puts("Started");
   sei();
 
-  i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
-  i2c_transmit_async(0x7a, i2c_write_const_cb, &oled_init_sequence);
-  ssd1306_put_image_P(0x7a, BACKGROUND, 0, 0);
+  progmem_image_sprite_init(&background, BACKGROUND, 0, 0);
+  progmem_image_sprite_init(&peak_indicator, PEAK_INDICATOR, 107, 7);
+  needle_sprite_init(&needle_a);
 
-  _delay_ms(100);
+  ssd1306_init(&device_a, DISPLAY_A_ADDRESS);
+  ssd1306_init(&device_b, DISPLAY_B_ADDRESS);
+  display_init(&display_a, &device_a);
+  display_init(&display_b, &device_b);
+
+  BENCHMARK(oled_init, {
+    i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
+    while (!i2c_is_idle()) _delay_us(100);
+  });
+
+  i2c_transmit_async(0x7a, i2c_write_const_cb, &oled_init_sequence);
+
+  display_add_sprite(&display_a, &background.sprite);
+  display_add_sprite(&display_a, &peak_indicator.sprite);
+  display_add_sprite(&display_a, &needle_a.sprite);
+
+  display_add_sprite(&display_b, &background.sprite);
+  display_add_sprite(&display_b, &peak_indicator.sprite);
+  display_add_sprite(&display_b, &needle_a.sprite);
+
+  float angle = -0.73;
+  float v = 0.05;
+  float a = -0.001;
 
   while (1) {
-    ssd1306_put_image_P(0x78, BACKGROUND, 0, 0);
-    ssd1306_put_image_P(0x7a, BACKGROUND, 0, 0);
-    ssd1306_put_image_P(0x78, PEAK_INDICATOR, 107, 56);
-    _delay_ms(500);
-    ssd1306_put_image_P(0x78, BACKGROUND, 0, 0);
-    ssd1306_put_image_P(0x7a, BACKGROUND, 0, 0);
-    ssd1306_put_image_P(0x7a, PEAK_INDICATOR, 107, 56);
-    _delay_ms(500);
-  };
+    v += a;
+    angle += v;
+    if (angle < -0.73) {
+      angle = -0.73 * 2 - angle;
+      v = -v * 0.5;
+    }
+
+    float dx = sin(angle);
+    float dy = cos(angle);
+    float x = 64 + dx * 96;
+    float y = 96 - dy * 96;
+
+    needle_sprite_draw(&needle_a, x, y, 64, 96);
+    peak_indicator.sprite.visible = (x > 90);
+    display_update_async(&display_a);
+    display_update_async(&display_b);
+
+    _delay_ms(50);
+  }
 }

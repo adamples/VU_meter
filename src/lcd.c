@@ -157,6 +157,11 @@ void lcd_write(uint8_t data, mode_t mode) {
   LCD_EN_TOGGLE();
   LCD_RS_LOW();
 
+  PORT(LCD_D7_PORT) &= ~_BV(LCD_D7_PIN);
+  PORT(LCD_D6_PORT) &= ~_BV(LCD_D6_PIN);
+  PORT(LCD_D5_PORT) &= ~_BV(LCD_D5_PIN);
+  PORT(LCD_D4_PORT) &= ~_BV(LCD_D4_PIN);
+
   _delay_us(41);
 
   if (mode == MODE_COMMAND && data == LCD_CMD_CLEAR)

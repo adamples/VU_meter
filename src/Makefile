@@ -9,12 +9,14 @@ C_SRC= \
 $(TARGET).c \
 lcd.c \
 fault.c \
+benchmark.c \
 ring_buffer.c \
 i2c.c \
 background.c \
 peak_indicator.c \
+ssd1306.c \
+display.c \
 drawing.c
-# ssd1306.c
 
 C_OBJS=$(C_SRC:.c=.o)
 OBJS=$(C_OBJS)
