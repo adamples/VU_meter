@@ -1,6 +1,10 @@
 # Prerequisites
 *.d
 
+# Intermediate files
+src/background.c
+src/peak_indicator.c
+
 # Object files
 *.o
 *.ko
