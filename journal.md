@@ -19,3 +19,10 @@ Possible next steps:
 - write all operations to the buffer (sending start/stop conditions, sending address), so reading buffer 
 can be decoupled from tasks logic,
 - provide better format for the buffer, that is both efficient and concise.
+
+## 26<sup>th</sup> November 2017
+
+FPS is back to normal with double buffering. At the same time clock cycles saved through asynchronous
+operation amount to between 5% and 20% of display redraw. Taking into account all overhead, both
+in program memory and RAM, plus all the complexity, it doesn't seem worth the time invested. If it proves
+to be impossible to free at least 50% of clock cycles I'll switch to synchronous I2C instead.
