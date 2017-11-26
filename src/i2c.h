@@ -16,9 +16,10 @@ void i2c_init(void);
 
 void i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data);
 void i2c_async_send_data(uint8_t data);
-void i2c_async_send_repeated_start(void);
+void i2c_async_send_start(void);
 void i2c_async_end_transmission(void);
 bool i2c_is_idle(void);
+void i2c_set_idle(void);
 
 
 #endif /* I2C_H */

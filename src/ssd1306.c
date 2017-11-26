@@ -25,11 +25,7 @@ void
 ssd1306_switch_i2c_mode(ssd1306_t *device, ssd1306_i2c_mode_t mode)
 {
   if (device->mode != mode) {
-
-    if (device->mode != SSD1306_I2C_MODE_NOT_SELECTED) {
-      i2c_async_send_repeated_start();
-    }
-
+    i2c_async_send_start();
     i2c_async_send_data(mode);
     device->mode = mode;
   }

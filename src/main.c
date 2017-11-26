@@ -15,54 +15,30 @@
 #include "benchmark.h"
 
 
-
-#define SSD1306_DEFAULT_ADDRESS 0x7a
-#define SSD1306_SETCONTRAST 0x81
-#define SSD1306_DISPLAYALLON_RESUME 0xA4
-#define SSD1306_DISPLAYALLON 0xA5
-#define SSD1306_NORMALDISPLAY 0xA6
-#define SSD1306_INVERTDISPLAY 0xA7
-#define SSD1306_DISPLAYOFF 0xAE
-#define SSD1306_DISPLAYON 0xAF
-#define SSD1306_SETDISPLAYOFFSET 0xD3
-#define SSD1306_SETCOMPINS 0xDA
-#define SSD1306_SETVCOMDETECT 0xDB
-#define SSD1306_SETDISPLAYCLOCKDIV 0xD5
-#define SSD1306_SETPRECHARGE 0xD9
-#define SSD1306_SETMULTIPLEX 0xA8
-#define SSD1306_SETLOWCOLUMN 0x00
-#define SSD1306_SETHIGHCOLUMN 0x10
-#define SSD1306_SETSTARTLINE 0x40
-#define SSD1306_MEMORYMODE 0x20
-#define SSD1306_COLUMNADDR 0x21
-#define SSD1306_PAGEADDR   0x22
-#define SSD1306_COMSCANINC 0xC0
-#define SSD1306_COMSCANDEC 0xC8
-#define SSD1306_SEGREMAP 0xA0
-#define SSD1306_CHARGEPUMP 0x8D
-#define SSD1306_SWITCHCAPVCC 0x2
-#define SSD1306_NOP 0xE3
-
-
 static const uint8_t OLED_INIT_SEQUENCE[] = {
     0x00,
-    SSD1306_DISPLAYOFF,
-    SSD1306_SETMULTIPLEX, 0x3F,
-    SSD1306_SETDISPLAYOFFSET, 0x00,
-    SSD1306_SETSTARTLINE | 0x00,
-    SSD1306_MEMORYMODE, 0x00,
-    SSD1306_SEGREMAP | 0x1, SSD1306_COMSCANDEC,
+    SSD1306_CMD_SET_DISPLAY_ON(false),
+    SSD1306_CMD_SET_MULTIPLEX_RATIO, 0x3F,
+    SSD1306_CMD_SET_DISPLAY_OFFSET, 0x00,
+    SSD1306_CMD_SET_DISPLAY_START_LINE(0x00),
+    SSD1306_CMD_SET_MEMORY_ADDRESSING_MODE, 0x00,
+    SSD1306_CMD_SET_SEGMENT_REMAP(true), SSD1306_CMD_SET_COM_SCAN_DIRECTION_DEC,
     /* rotated: SSD1306_SEGREMAP | 0x0, SSD1306_COMSCANINC */
-    SSD1306_SETCOMPINS, 0x12,
-    SSD1306_SETPRECHARGE, 0x11,
-    SSD1306_SETVCOMDETECT, 0x40,
-    SSD1306_DISPLAYALLON_RESUME,
-    SSD1306_NORMALDISPLAY,
-    SSD1306_SETDISPLAYCLOCKDIV, 0xf0,
-    SSD1306_SETCONTRAST, 0xcf,
-    SSD1306_CHARGEPUMP, 0x14,
-    SSD1306_DISPLAYON
+    SSD1306_CMD_SET_COM_PINS_HW_CONF, 0x12,
+    SSD1306_CMD_SET_PRECHARGE_PERIOD, 0x11,
+    SSD1306_CMD_SET_VCOMH_DESELECT_LEVEL, 0x40,
+    SSD1306_CMD_ENTIRE_DISPLAY_ON(false),
+    SSD1306_CMD_SET_INVERSED(false),
+    SSD1306_CMD_SET_CLOCK_DIVIDE_FREQUENCY, 0xf0,
+    SSD1306_CMD_SET_CONTRAST, 0xcf,
+    SSD1306_CMD_CHARGE_PUMP_SETTING, 0x14,
+    SSD1306_CMD_SET_DISPLAY_ON(true),
+    SSD1306_CMD_SET_COLUMN_ADDRESS,
+    0x00, 0x7f,
+    SSD1306_CMD_SET_PAGE_ADDRESS,
+    0x00, 0x07
 };
+
 
 typedef struct write_const_t_ {
   uint16_t length;
@@ -75,6 +51,10 @@ void
 i2c_write_const_cb(void *data)
 {
   write_const_t *wc = (write_const_t *) data;
+
+  if (wc->counter == 0) {
+    i2c_async_send_start();
+  }
 
   if (wc->counter < wc->length) {
     for (uint8_t i = 0; i < 16 && wc->counter < wc->length; ++i) {
@@ -119,12 +99,17 @@ int main(void)
   display_init(&display_a, &device_a);
   display_init(&display_b, &device_b);
 
-  BENCHMARK(oled_init, {
-    i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
-    while (!i2c_is_idle()) _delay_us(100);
-  });
-
+  i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
   i2c_transmit_async(0x7a, i2c_write_const_cb, &oled_init_sequence);
+  _delay_ms(100);
+
+  //~ BENCHMARK(oled_init, {
+    //~ i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
+    //~ i2c_transmit_async(0x7a, i2c_write_const_cb, &oled_init_sequence);
+    //~ while (!i2c_is_idle()) _delay_us(50);
+  //~ });
+
+  //~ _delay_ms(100);
 
   display_add_sprite(&display_a, &background.sprite);
   display_add_sprite(&display_a, &peak_indicator.sprite);
@@ -153,9 +138,20 @@ int main(void)
 
     needle_sprite_draw(&needle_a, x, y, 64, 96);
     peak_indicator.sprite.visible = (x > 90);
+
     display_update_async(&display_a);
     display_update_async(&display_b);
 
-    _delay_ms(50);
+    //~ _delay_ms(6);
+    uint16_t i = 0;
+
+    while (!i2c_is_idle()) {
+      _delay_ms(1);
+      ++i;
+    }
+
+    lcd_goto(0, 1);
+    lcd_put_int(i);
+    lcd_puts("   ");
   }
 }

@@ -20,7 +20,7 @@ display_add_sprite(display_t *display, sprite_t *sprite)
   ++display->sprites_n;
 }
 
-#define SEGMENTS_N (32)
+#define SEGMENTS_N (16)
 
 void
 display_update_async_cb(display_t *display)
@@ -30,7 +30,8 @@ display_update_async_cb(display_t *display)
   if (display->update_column == 0 && display->update_page == 0) {
     ssd1306_start_update(display->device);
     ssd1306_move_to(display->device, 0, 0);
-    i2c_async_send_repeated_start();
+    // ssd1306_switch_i2c_mode(display->device, SSD1306_I2C_MODE_DATA);
+    i2c_async_send_start();
     i2c_async_send_data(0x40);
   }
 
