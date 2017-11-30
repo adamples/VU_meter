@@ -109,22 +109,11 @@ int main(void)
 
   needle_sprite_draw(&needle_a, 0, 24, 64, 96);
 
-
   i2c_transmit_async(DISPLAY_A_ADDRESS, i2c_write_const_cb, &oled_init_sequence);
   i2c_transmit_async(DISPLAY_B_ADDRESS, i2c_write_const_cb, &oled_init_sequence);
   display_update_async(&display_a);
   display_update_async(&display_b);
   _delay_ms(100);
-
-  //~ while (1);
-
-  //~ BENCHMARK(oled_init, {
-    //~ i2c_transmit_async(0x78, i2c_write_const_cb, &oled_init_sequence);
-    //~ i2c_transmit_async(0x7a, i2c_write_const_cb, &oled_init_sequence);
-    //~ while (!i2c_is_idle()) _delay_us(50);
-  //~ });
-
-  //~ _delay_ms(100);
 
   uint16_t i = 0;
 
@@ -143,7 +132,7 @@ int main(void)
   lcd_put_int(i);
   lcd_puts("00us");
 
-  while (1);
+  //~ while (1);
 
   float angle = -0.73;
   float v = 0.05;
@@ -171,11 +160,10 @@ int main(void)
     display_update_async(&display_a);
     display_update_async(&display_b);
 
-    lcd_clear();
-    lcd_put_int(angle * 1000);
-    lcd_puts("rad");
+    //~ lcd_clear();
+    //~ lcd_put_int(angle * 1000);
+    //~ lcd_puts("rad");
 
     //~ _delay_ms(500);
-    //~ background.sprite.visible ^= true;
   }
 }

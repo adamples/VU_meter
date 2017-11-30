@@ -10,7 +10,8 @@
 typedef enum i2c_command_code_t_ {
   I2C_COMMAND_START = 0x01,
   I2C_COMMAND_SEND_DATA = 0x02,
-  I2C_COMMAND_STOP = 0x03
+  I2C_COMMAND_STOP = 0x03,
+  I2C_COMMAND_PENDING = 0x04
 } i2c_command_code_t;
 
 

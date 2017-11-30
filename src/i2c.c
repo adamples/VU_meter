@@ -31,7 +31,9 @@ typedef struct i2c_queue_t_ {
   bool transmitter_active;
   bool pending_buffer_switch;
   uint8_t tasks_n;
+
   uint8_t front_buffer_cursor;
+  i2c_command_t current_command;
 } i2c_queue_t;
 
 
@@ -111,6 +113,8 @@ i2c_queue_switch_buffers()
   I2C_QUEUE.pending_buffer_switch = false;
   I2C_QUEUE.back_buffer->length = 0;
   I2C_QUEUE.front_buffer_cursor = 0;
+
+  I2C_QUEUE.current_command = I2C_QUEUE.front_buffer->commands[0];
 }
 
 
@@ -127,9 +131,11 @@ i2c_queue_switch_tasks(void)
 
 static void i2c_queue_process_command(void);
 
-static void i2c_queue_start_transmitter(void)
+static inline void i2c_queue_start_transmitter(void)
 {
   assert(!(I2C_QUEUE.transmitter_active));
+  assert(I2C_QUEUE.current_command.code != I2C_COMMAND_PENDING);
+
   I2C_QUEUE.transmitter_active = true;
   i2c_queue_process_command();
 }
@@ -181,35 +187,15 @@ static void
 i2c_queue_process_command(void)
 {
   assert_interrupts_disabled();
-
   assert(I2C_QUEUE.transmitter_active);
 
-  bool pending_fetch = false;
-
-  if (I2C_QUEUE.front_buffer_cursor == I2C_QUEUE.front_buffer->length) {
-    /* Run out of data... */
-    if (I2C_QUEUE.pending_buffer_switch) {
-      /* But more is waiting, so just switch and we're good to go */
-      i2c_queue_switch_buffers();
-      pending_fetch = true;
-    }
-    else {
-      /* No more data waiting - disable transmitter interrupt and exit */
-      i2c_hw_disable_interrupt();
-      I2C_QUEUE.transmitter_active = false;
-      return;
-    }
-  }
-
   assert(I2C_QUEUE.front_buffer->length > 0);
-  assert(I2C_QUEUE.front_buffer_cursor < I2C_QUEUE.front_buffer->length);
+  assert(I2C_QUEUE.front_buffer_cursor <= I2C_QUEUE.front_buffer->length);
 
-  i2c_command_t command = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor];
-
-  switch (command.code) {
+  switch (I2C_QUEUE.current_command.code) {
 
     case I2C_COMMAND_SEND_DATA:
-      i2c_hw_send_byte(command.data);
+      i2c_hw_send_byte(I2C_QUEUE.current_command.data);
       break;
 
     case I2C_COMMAND_START:
@@ -221,8 +207,27 @@ i2c_queue_process_command(void)
       I2C_QUEUE.transmitter_active = false;
       break;
 
+    case I2C_COMMAND_PENDING:
+      /* Run out of data... */
+      if (I2C_QUEUE.pending_buffer_switch) {
+        /* But more is waiting, so just switch and we're good to go */
+        i2c_queue_switch_buffers();
+        i2c_queue_process_command();
+
+        if (I2C_QUEUE.tasks_n > 0) {
+          i2c_queue_fetch_commands();
+        }
+      }
+      else {
+        /* No more data waiting - disable transmitter interrupt and exit */
+        i2c_hw_disable_interrupt();
+        I2C_QUEUE.transmitter_active = false;
+      }
+
+      return;
+
     default:
-      fault(FAULT_I2C, command.code, "Invalid command");
+      fault(FAULT_I2C, I2C_QUEUE.current_command.code, "Invalid command");
       break;
   }
 
@@ -238,12 +243,18 @@ i2c_queue_process_command(void)
         i2c_queue_start_transmitter();
       }
 
-      pending_fetch = (I2C_QUEUE.tasks_n > 0);
+      if (I2C_QUEUE.tasks_n > 0) {
+        i2c_queue_fetch_commands();
+      }
+    }
+    else {
+      I2C_QUEUE.current_command.code = I2C_COMMAND_PENDING;
     }
   }
-
-  if (pending_fetch)
-    i2c_queue_fetch_commands();
+  else {
+    I2C_QUEUE.current_command = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor];
+    assert(I2C_QUEUE.transmitter_active);
+  }
 }
 
 
@@ -271,6 +282,8 @@ void i2c_init(void)
   I2C_QUEUE.pending_buffer_switch = false;
   I2C_QUEUE.transmitter_active = false;
   I2C_QUEUE.tasks_n = 0;
+
+  I2C_QUEUE.current_command.code = I2C_COMMAND_PENDING;
 
   ring_buffer_init(
     &(I2C_QUEUE.tasks),
