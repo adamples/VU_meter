@@ -143,7 +143,7 @@ int main(void)
   lcd_put_int(i);
   lcd_puts("00us");
 
-  //~ while (1);
+  while (1);
 
   float angle = -0.73;
   float v = 0.05;

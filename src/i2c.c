@@ -25,13 +25,13 @@ typedef struct i2c_queue_t_ {
   i2c_command_buffer_t buffer_a;
   i2c_command_buffer_t buffer_b;
 
-  i2c_command_buffer_t * volatile front_buffer;
-  i2c_command_buffer_t * volatile back_buffer;
+  i2c_command_buffer_t *front_buffer;
+  i2c_command_buffer_t *back_buffer;
 
-  volatile bool transmitter_active;
-  volatile bool pending_buffer_switch;
-  volatile uint8_t tasks_n;
-  volatile uint8_t front_buffer_cursor;
+  bool transmitter_active;
+  bool pending_buffer_switch;
+  uint8_t tasks_n;
+  uint8_t front_buffer_cursor;
 } i2c_queue_t;
 
 
