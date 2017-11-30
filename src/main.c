@@ -167,7 +167,6 @@ int main(void)
     //~ lcd_clear();
     //~ lcd_put_int(angle * 1000);
     //~ lcd_puts("rad");
-
     //~ _delay_ms(500);
   }
 }

@@ -5,7 +5,7 @@
 #include "lcd.h"
 
 
-#define SECONDS_PER_TICK (0.0002)
+#define SECONDS_PER_TICK (0.00001)
 
 static volatile uint16_t TCNT1_ADD = 0;
 static volatile bool initialized = false;
@@ -27,22 +27,22 @@ void benchmark_init(void)
   /* Timer/Counter2: Mode 7 (Fast PWM) */
   TCCR2A |= _BV(WGM21) | _BV(WGM20);
   TCCR2B |= _BV(WGM22);
-  /* Timer/Counter2: TOP = OCR2A = 124 */
-  OCR2A = 124;
+  /* Timer/Counter2: TOP = OCR2A = 24 */
+  OCR2A = 24;
   /* Timer/Counter2: Duty Cycle 50% */
-  OCR2B = 62;
+  OCR2B = 12;
   /* Timer/Counter2: Clear OC2B on Compare Match, set OC2B at BOTTOM */
   TCCR2A |= _BV(COM2B1);
   DDRD |= _BV(PD3);
-  /* Timer/Counter2: Clock Source = CLK/32 */
-  TCCR2B |= _BV(CS21) | _BV(CS20);
+  /* Timer/Counter2: Clock Source = CLK/8 */
+  TCCR2B |= _BV(CS21);
 
   /* Timer/Counter1: Mode 0 (Normal) */
   TCCR1A |= 0;
   /* Timer/Counter1: Clock Source = T1 Rising Edge */
   TCCR1B |= _BV(CS12) | _BV(CS11) | _BV(CS10);
   /* Enable timer overflow interrupt */
-  //~ TIMSK1 |= _BV(TOIE1);
+  TIMSK1 |= _BV(TOIE1);
 }
 
 
@@ -51,7 +51,7 @@ time_t get_current_time(void)
   time_t result = 0;
 
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = (time_t) TCNT1 * SECONDS_PER_TICK;
+    result = (time_t) (TCNT1_ADD * 0x10000L + TCNT1) * SECONDS_PER_TICK;
   }
 
   return result;

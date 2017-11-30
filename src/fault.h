@@ -11,8 +11,7 @@ typedef enum fault_code_t_ {
 
 
 #ifdef NDEBUG
-  // #define fault(code, extended_status, error_text) do { } while (0);
-  #define fault(code, extended_status, error_text) lcd_fault((code), (extended_status), (error_text))
+  #define fault(code, extended_status, error_text) do { } while (0);
 #else
   #define fault(code, extended_status, error_text) lcd_fault((code), (extended_status), (error_text))
 #endif

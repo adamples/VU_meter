@@ -277,20 +277,18 @@ i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
 static inline void
 i2c_produce_command(i2c_command_code_t code, uint8_t data)
 {
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    assert(I2C_QUEUE.back_buffer->length < I2C_BUFFER_SIZE);
+  assert(I2C_QUEUE.back_buffer->length < I2C_BUFFER_SIZE);
 
-    i2c_command_t *command = &(I2C_QUEUE.back_buffer->commands[I2C_QUEUE.back_buffer->length]);
+  i2c_command_t *command = &(I2C_QUEUE.back_buffer->commands[I2C_QUEUE.back_buffer->length]);
 
-    command->code = code;
-    command->data = data;
+  command->code = code;
+  command->data = data;
 
-    ++(I2C_QUEUE.back_buffer->length);
-  }
+  ++(I2C_QUEUE.back_buffer->length);
 }
 
 
-extern inline void
+void
 i2c_async_send_data(uint8_t data)
 {
   i2c_produce_command(I2C_COMMAND_SEND_DATA, data);
