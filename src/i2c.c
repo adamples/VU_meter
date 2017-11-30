@@ -88,6 +88,14 @@ i2c_hw_go_idle(void)
   TWCR = 0;
 }
 
+
+static inline void
+i2c_hw_disable_interrupt(void)
+{
+  /* Clear InterruptEnable bit, but don't write INT bit, so it doesn't get cleared */
+  TWCR &= ~_BV(TWIE) & ~_BV(TWINT);
+}
+
 /* end of Low level hardware operations ------------------------------------- */
 
 static void
@@ -119,6 +127,13 @@ i2c_queue_switch_tasks(void)
 
 static void i2c_queue_process_command(void);
 
+static void i2c_queue_start_transmitter(void)
+{
+  assert(!(I2C_QUEUE.transmitter_active));
+  I2C_QUEUE.transmitter_active = true;
+  i2c_queue_process_command();
+}
+
 
 static void
 i2c_queue_fetch_commands(void)
@@ -127,8 +142,11 @@ i2c_queue_fetch_commands(void)
   assert(I2C_QUEUE.tasks_n > 0);
   assert(!(I2C_QUEUE.pending_buffer_switch));
 
-  while (I2C_QUEUE.tasks_n > 0)
-  {
+  do {
+    if (I2C_QUEUE.tasks_n == 0) {
+      return;
+    }
+
     i2c_task_t *task = (i2c_task_t *) ring_buffer_get_first(&(I2C_QUEUE.tasks));
 
     assert(I2C_QUEUE.back_buffer->length == 0);
@@ -148,15 +166,14 @@ i2c_queue_fetch_commands(void)
       /* Other buffer was sent in full, we start processing next command and
        * proceed to produce more commands immediately. */
       i2c_queue_switch_buffers();
-      I2C_QUEUE.transmitter_active = true;
-      i2c_queue_process_command();
+      i2c_queue_start_transmitter();
     }
     else {
       /* We finished before sending the other buffer, schedule the switch */
       I2C_QUEUE.pending_buffer_switch = true;
       return;
     }
-  }
+  } while (true);
 }
 
 
@@ -165,26 +182,29 @@ i2c_queue_process_command(void)
 {
   assert_interrupts_disabled();
 
-  assert(I2C_QUEUE.front_buffer->length > 0);
-  assert(I2C_QUEUE.front_buffer_cursor <= I2C_QUEUE.front_buffer->length);
   assert(I2C_QUEUE.transmitter_active);
+
+  bool pending_fetch = false;
 
   if (I2C_QUEUE.front_buffer_cursor == I2C_QUEUE.front_buffer->length) {
     /* Run out of data... */
     if (I2C_QUEUE.pending_buffer_switch) {
       /* But more is waiting, so just switch and we're good to go */
       i2c_queue_switch_buffers();
+      pending_fetch = true;
     }
     else {
       /* No more data waiting - disable transmitter interrupt and exit */
-      TWCR &= ~_BV(TWIE);
+      i2c_hw_disable_interrupt();
       I2C_QUEUE.transmitter_active = false;
       return;
     }
   }
 
+  assert(I2C_QUEUE.front_buffer->length > 0);
+  assert(I2C_QUEUE.front_buffer_cursor < I2C_QUEUE.front_buffer->length);
+
   i2c_command_t command = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor];
-  bool interrupt_pending = true;
 
   switch (command.code) {
 
@@ -198,7 +218,7 @@ i2c_queue_process_command(void)
 
     case I2C_COMMAND_STOP:
       i2c_hw_send_stop_condition();
-      interrupt_pending = false;
+      I2C_QUEUE.transmitter_active = false;
       break;
 
     default:
@@ -214,22 +234,16 @@ i2c_queue_process_command(void)
       i2c_queue_switch_buffers();
 
       /* If previous buffer ended on stop condition, we have to manually process next command. */
-      if (!interrupt_pending) {
-        i2c_queue_process_command();
+      if (!I2C_QUEUE.transmitter_active) {
+        i2c_queue_start_transmitter();
       }
 
-      if (I2C_QUEUE.tasks_n > 0)
-        i2c_queue_fetch_commands();
-    }
-    else {
-      if (!interrupt_pending) {
-        I2C_QUEUE.transmitter_active = false;
-      }
+      pending_fetch = (I2C_QUEUE.tasks_n > 0);
     }
   }
-  else {
-    assert(interrupt_pending);
-  }
+
+  if (pending_fetch)
+    i2c_queue_fetch_commands();
 }
 
 
