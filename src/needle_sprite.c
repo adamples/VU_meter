@@ -1,7 +1,8 @@
 #include "needle_sprite.h"
-#include "assert.h"
 #include <stdlib.h>
 #include <string.h>
+#include "utils.h"
+#include "assert.h"
 
 
 void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
@@ -31,11 +32,6 @@ void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, u
   }
 }
 
-
-#define int_min(a, b) (((a) < (b)) ? (a) : (b))
-#define int_max(a, b) (((a) > (b)) ? (a) : (b))
-
-#include <util/delay.h>
 
 static void
 needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments)

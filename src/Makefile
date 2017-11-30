@@ -16,7 +16,8 @@ background.c \
 peak_indicator.c \
 ssd1306.c \
 display.c \
-drawing.c
+progmem_image_sprite.c \
+needle_sprite.c
 
 C_OBJS=$(C_SRC:.c=.o)
 OBJS=$(C_OBJS)

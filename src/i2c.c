@@ -3,12 +3,12 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
-#include <util/delay.h>
 #include <util/twi.h>
 #include "config.h"
 #include "fault.h"
 #include "assert.h"
 #include "ring_buffer.h"
+#include "i2c_hw.h"
 
 
 typedef struct i2c_task_t_ {
@@ -43,62 +43,8 @@ static i2c_queue_t I2C_QUEUE;
 #define assert_interrupts_disabled() assert((SREG & _BV(SREG_I)) == 0)
 
 
-/* Low level hardware operations -------------------------------------------- */
+static void i2c_queue_process_command(void);
 
-static inline void
-i2c_hw_init(void)
-{
-  TWSR = 0x00;
-  TWCR = 0x00;
-  TWBR = ((F_CPU / I2C_CLOCK) - 16) / 2;
-}
-
-
-static inline void
-i2c_hw_wait(void)
-{
-  while (!(TWCR & _BV(TWINT)));
-}
-
-
-static inline void
-i2c_hw_send_start_condition(void)
-{
-  TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWIE) | _BV(TWSTA);
-}
-
-
-static inline void
-i2c_hw_send_stop_condition(void)
-{
-  TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTO);
-  while (TWCR & _BV(TWSTO));
-}
-
-
-static inline void
-i2c_hw_send_byte(uint8_t octet)
-{
-  TWDR = octet;
-  TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWIE);
-}
-
-
-static inline void
-i2c_hw_go_idle(void)
-{
-  TWCR = 0;
-}
-
-
-static inline void
-i2c_hw_disable_interrupt(void)
-{
-  /* Clear InterruptEnable bit, but don't write INT bit, so it doesn't get cleared */
-  TWCR &= ~_BV(TWIE) & ~_BV(TWINT);
-}
-
-/* end of Low level hardware operations ------------------------------------- */
 
 static void
 i2c_queue_switch_buffers()
@@ -128,8 +74,6 @@ i2c_queue_switch_tasks(void)
   --I2C_QUEUE.tasks_n;
 }
 
-
-static void i2c_queue_process_command(void);
 
 static inline void i2c_queue_start_transmitter(void)
 {

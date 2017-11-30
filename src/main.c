@@ -11,6 +11,7 @@
 #include "images.h"
 #include "ssd1306.h"
 #include "display.h"
+#include "progmem_image_sprite.h"
 #include "needle_sprite.h"
 #include "benchmark.h"
 
