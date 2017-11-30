@@ -22,7 +22,7 @@ display_add_sprite(display_t *display, sprite_t *sprite)
 
 #define SEGMENTS_N (16)
 
-void
+bool
 display_update_async_cb(i2c_command_buffer_t *commands, display_t *display)
 {
   //~ uint8_t segments[SEGMENTS_N];
@@ -51,12 +51,6 @@ display_update_async_cb(i2c_command_buffer_t *commands, display_t *display)
     i2c_command_buffer_append_send_data(commands, display->device->address);
     i2c_command_buffer_append_send_data(commands, 0x40);
   }
-
-  //~ if (display->update_column == 32 && display->update_page == 0) {
-    //~ ssd1306_put_segment(display->device, 0xa5);
-    //~ ssd1306_put_segment(display->device, 0x5a);
-    //~ ssd1306_put_segment(display->device, 0xa5);
-  //~ }
 
   for (uint8_t i = 0; i < SEGMENTS_N; ++i) {
     commands->commands[commands->length + i].code = I2C_COMMAND_SEND_DATA;
@@ -92,8 +86,11 @@ display_update_async_cb(i2c_command_buffer_t *commands, display_t *display)
 
     if (display->update_page == SSD1306_PAGES_N) {
       i2c_async_end_transmission();
+      return false;
     }
   }
+
+  return true;
 }
 
 

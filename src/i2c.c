@@ -157,14 +157,15 @@ i2c_queue_fetch_commands(void)
 
     assert(I2C_QUEUE.back_buffer->length == 0);
 
+    bool keep_task = false;
+
     NONATOMIC_BLOCK(NONATOMIC_FORCEOFF) {
-      task->callback(I2C_QUEUE.back_buffer, task->data);
+      keep_task = task->callback(I2C_QUEUE.back_buffer, task->data);
     }
 
     assert(I2C_QUEUE.back_buffer->length > 0);
 
-    if (I2C_QUEUE.back_buffer->commands[I2C_QUEUE.back_buffer->length - 1].code == I2C_COMMAND_STOP)
-    {
+    if (!keep_task) {
       i2c_queue_switch_tasks();
     }
 

@@ -11,7 +11,7 @@
 #include "images.h"
 #include "ssd1306.h"
 #include "display.h"
-#include "drawing.h"
+#include "needle_sprite.h"
 #include "benchmark.h"
 
 
@@ -47,7 +47,7 @@ typedef struct write_const_t_ {
 } write_const_t;
 
 
-void
+bool
 i2c_write_const_cb(i2c_command_buffer_t *commands, void *data)
 {
   write_const_t *wc = (write_const_t *) data;
@@ -61,11 +61,13 @@ i2c_write_const_cb(i2c_command_buffer_t *commands, void *data)
       i2c_async_send_data(wc->data[wc->counter]);
       ++wc->counter;
     }
+
+    return true;
   }
-  else {
-    wc->counter = 0;
-    i2c_async_end_transmission();
-  }
+
+  wc->counter = 0;
+  i2c_async_end_transmission();
+  return false;
 }
 
 
@@ -153,10 +155,11 @@ int main(void)
     float x = 64 + dx * 96;
     float y = 96 - dy * 96;
 
+    while (!i2c_is_idle());
+
     needle_sprite_draw(&needle_a, x, y, 64, 96);
     peak_indicator.sprite.visible = (x > 90);
 
-    while (!i2c_is_idle());
     display_update_async(&display_a);
     display_update_async(&display_b);
 

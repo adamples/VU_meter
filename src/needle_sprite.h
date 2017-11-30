@@ -1,5 +1,5 @@
-#ifndef DRAWING_H
-#define DRAWING_H_
+#ifndef NEEDLE_SPRITE_H
+#define NEEDLE_SPRITE_H
 
 #include <stdint.h>
 #include "ssd1306.h"
@@ -18,4 +18,4 @@ void needle_sprite_draw(needle_sprite_t *needle, uint8_t ax, uint8_t ay, uint8_t
 void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by);
 
 
-#endif /* DRAWING_H */
+#endif /* NEEDLE_SPRITE_H */

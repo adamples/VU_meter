@@ -27,7 +27,7 @@ typedef struct i2c_command_buffer_t_ {
 } i2c_command_buffer_t;
 
 
-typedef void (*i2c_callback_t)(i2c_command_buffer_t *commands, void *data);
+typedef bool (*i2c_callback_t)(i2c_command_buffer_t *commands, void *data);
 
 
 void i2c_init(void);

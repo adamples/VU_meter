@@ -1,4 +1,4 @@
-#include "drawing.h"
+#include "needle_sprite.h"
 #include "assert.h"
 #include <stdlib.h>
 #include <string.h>
@@ -42,14 +42,14 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
 {
   needle_sprite_t *needle = (needle_sprite_t *) sprite;
 
-  //~ int8_t column_start = needle->column[page * SSD1306_PAGE_HEIGHT];
-  //~ int8_t column_end = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
-  //~ int8_t column_min = int_min(column_start, column_end);
-  //~ int8_t column_max = int_max(column_start, column_end);
+  int8_t column_start = needle->column[page * SSD1306_PAGE_HEIGHT];
+  int8_t column_end = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+  int8_t column_min = int_min(column_start, column_end);
+  int8_t column_max = int_max(column_start, column_end);
 
-  //~ if (column_max + 3 < column_a || column_min > column_b + 3) {
-    //~ return;
-  //~ }
+  if (column_max + 3 < column_a || column_min > column_b + 3) {
+    return;
+  }
 
   for (uint8_t column = column_a; column <= column_b; ++column) {
 
