@@ -23,16 +23,44 @@ display_add_sprite(display_t *display, sprite_t *sprite)
 #define SEGMENTS_N (16)
 
 void
-display_update_async_cb(display_t *display)
+display_update_async_cb(i2c_command_buffer_t *commands, display_t *display)
 {
-  uint8_t segments[SEGMENTS_N] = { 0 };
+  //~ uint8_t segments[SEGMENTS_N];
+
+  //~ for (uint8_t i = 0; i < I2C_BUFFER_SIZE; ++i) {
+    //~ commands->commands[i].code = 0xff;
+    //~ commands->commands[i].data = 0x00;
+  //~ }
 
   if (display->update_column == 0 && display->update_page == 0) {
-    ssd1306_start_update(display->device);
-    ssd1306_move_to(display->device, 0, 0);
-    // ssd1306_switch_i2c_mode(display->device, SSD1306_I2C_MODE_DATA);
-    i2c_async_send_start();
-    i2c_async_send_data(0x40);
+    //~ ssd1306_start_update(display->device);
+    //~ ssd1306_move_to(display->device, 0, 0);
+    //~ ssd1306_switch_i2c_mode(display->device, SSD1306_I2C_MODE_DATA);
+    //~ i2c_async_send_start();
+    //~ i2c_async_send_data(0x40);
+    i2c_command_buffer_append_start(commands);
+    i2c_command_buffer_append_send_data(commands, display->device->address);
+    i2c_command_buffer_append_send_data(commands, 0x00);
+    i2c_command_buffer_append_send_data(commands, SSD1306_CMD_SET_COLUMN_ADDRESS);
+    i2c_command_buffer_append_send_data(commands, 0);
+    i2c_command_buffer_append_send_data(commands, 127);
+    i2c_command_buffer_append_send_data(commands, SSD1306_CMD_SET_PAGE_ADDRESS);
+    i2c_command_buffer_append_send_data(commands, 0);
+    i2c_command_buffer_append_send_data(commands, 7);
+    i2c_command_buffer_append_start(commands);
+    i2c_command_buffer_append_send_data(commands, display->device->address);
+    i2c_command_buffer_append_send_data(commands, 0x40);
+  }
+
+  //~ if (display->update_column == 32 && display->update_page == 0) {
+    //~ ssd1306_put_segment(display->device, 0xa5);
+    //~ ssd1306_put_segment(display->device, 0x5a);
+    //~ ssd1306_put_segment(display->device, 0xa5);
+  //~ }
+
+  for (uint8_t i = 0; i < SEGMENTS_N; ++i) {
+    commands->commands[commands->length + i].code = I2C_COMMAND_SEND_DATA;
+    commands->commands[commands->length + i].data = 0;
   }
 
   for (uint8_t i = 0; i < display->sprites_n; ++i) {
@@ -42,14 +70,19 @@ display_update_async_cb(display_t *display)
         display->update_column,
         display->update_page,
         display->update_column + SEGMENTS_N - 1,
-        segments
+        (segment_t *) &(commands->commands[commands->length])
       );
     }
   }
 
-  for (uint8_t i = 0; i < SEGMENTS_N; ++i)
-    i2c_async_send_data(segments[i]);
+  commands->length += SEGMENTS_N;
+
+  //~ for (uint8_t i = 0; i < SEGMENTS_N; ++i)
+    //~ i2c_async_send_data(segments[i]);
+    //~ i2c_command_buffer_append_send_data(commands, segments[i]);
     //~ ssd1306_put_segment(display->device, segments[i]);
+
+  //~ ssd1306_put_segments(display->device, segments, SEGMENTS_N);
 
   display->update_column += SEGMENTS_N;
 
@@ -82,7 +115,7 @@ display_update_async(display_t *display)
 #define int_max(a, b) (((a) > (b)) ? (a) : (b))
 
 static void
-progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, uint8_t* segments)
+progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments)
 {
   progmem_image_sprite_t *image = (progmem_image_sprite_t *) sprite;
 
@@ -98,10 +131,10 @@ progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, ui
   int8_t source_page = page - image->page;
 
   const uint8_t *source = image->data + source_column_a + source_page * image->width;
-  uint8_t *target = segments + target_column_a - column_a;
+  segment_t *target = segments + target_column_a - column_a;
 
   for (uint8_t i = target_column_a; i <= target_column_b; ++i) {
-    *target = pgm_read_byte(source);
+    target->value = pgm_read_byte(source);
     ++target;
     ++source;
   }
@@ -116,6 +149,6 @@ progmem_image_sprite_init(progmem_image_sprite_t *image, const uint8_t *data, ui
   image->column = column;
   image->page = page;
   image->width = pgm_read_byte(data);
-  image->height = pgm_read_byte(data + 1) / SSD1306_SEGMENT_HEIGHT;
+  image->height = pgm_read_byte(data + 1) / SSD1306_PAGE_HEIGHT;
   image->data = data + 2;
 }

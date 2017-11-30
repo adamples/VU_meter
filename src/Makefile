@@ -37,7 +37,7 @@ IMAGE2C=python3 image2c.py
 CFLAGS+=-mmcu=$(MCU)
 CFLAGS+=-DF_CPU="$(F_CPU)UL"
 
-CFLAGS+=-O1
+CFLAGS+=-O2
 CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror

@@ -7,11 +7,15 @@
 
 #define DISPLAY_MAX_SPRITES (4)
 
+typedef struct segment_t_ {
+  uint8_t reserved;
+  uint8_t value;
+} segment_t;
 
 typedef struct sprite_t_ sprite_t;
 
 typedef void (*sprite_get_extent_t)(sprite_t *sprite, uint8_t page, uint8_t *min, uint8_t *max);
-typedef void (*sprite_render_t)(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, uint8_t* segments);
+typedef void (*sprite_render_t)(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments);
 
 struct sprite_t_ {
   sprite_get_extent_t get_extent;

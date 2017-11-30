@@ -48,7 +48,7 @@ typedef struct write_const_t_ {
 
 
 void
-i2c_write_const_cb(void *data)
+i2c_write_const_cb(i2c_command_buffer_t *commands, void *data)
 {
   write_const_t *wc = (write_const_t *) data;
 
@@ -117,7 +117,29 @@ int main(void)
 
   display_add_sprite(&display_b, &background.sprite);
   display_add_sprite(&display_b, &peak_indicator.sprite);
-  display_add_sprite(&display_b, &needle_a.sprite);
+  //~ display_add_sprite(&display_b, &needle_a.sprite);
+
+  needle_sprite_draw(&needle_a, 0, 24, 64, 96);
+
+
+  uint16_t i = 0;
+
+  while (!i2c_is_idle());
+
+  BENCHMARK(display_update, {
+    display_update_async(&display_a);
+
+    while (!i2c_is_idle()) {
+      _delay_us(100);
+      ++i;
+    }
+  });
+
+  lcd_goto(8, 1);
+  lcd_put_int(i);
+  lcd_puts("00us");
+
+  while (1);
 
   float angle = -0.73;
   float v = 0.05;
@@ -131,6 +153,8 @@ int main(void)
       v = -v * 0.5;
     }
 
+    //~ angle = 0.264;
+
     float dx = sin(angle);
     float dy = cos(angle);
     float x = 64 + dx * 96;
@@ -139,19 +163,15 @@ int main(void)
     needle_sprite_draw(&needle_a, x, y, 64, 96);
     peak_indicator.sprite.visible = (x > 90);
 
+    while (!i2c_is_idle());
     display_update_async(&display_a);
-    display_update_async(&display_b);
+    //~ display_update_async(&display_b);
 
-    //~ _delay_ms(6);
-    uint16_t i = 0;
+    lcd_clear();
+    lcd_put_int(angle * 1000);
+    lcd_puts("rad");
 
-    while (!i2c_is_idle()) {
-      _delay_ms(1);
-      ++i;
-    }
-
-    lcd_goto(0, 1);
-    lcd_put_int(i);
-    lcd_puts("   ");
+    _delay_ms(500);
+    //~ background.sprite.visible ^= true;
   }
 }

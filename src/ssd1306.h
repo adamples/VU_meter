@@ -7,10 +7,10 @@
 
 #define SSD1306_COLUMNS_N (128)
 #define SSD1306_PAGES_N (8)
-#define SSD1306_SEGMENT_HEIGHT (8)
+#define SSD1306_PAGE_HEIGHT (8)
 
 #define SSD1306_WIDTH (SSD1306_COLUMNS_N)
-#define SSD1306_HEIGHT (SSD1306_PAGES_N * SSD1306_SEGMENT_HEIGHT)
+#define SSD1306_HEIGHT (SSD1306_PAGES_N * SSD1306_PAGE_HEIGHT)
 
 #define SSD1306_CMD_SET_LOW_COLUMN(low) (0x00 | low)
 #define SSD1306_CMD_SET_HIGH_COLUMN(hi) (0x10 | hi)
@@ -57,6 +57,7 @@ void ssd1306_start_update(ssd1306_t *device);
 
 void ssd1306_move_to(ssd1306_t *device, uint8_t column, uint8_t page);
 void ssd1306_put_segment(ssd1306_t *device, uint8_t segment);
+void ssd1306_put_segments(ssd1306_t *device, uint8_t *segments, uint8_t length);
 
 
 #endif /* SSD1306_H */

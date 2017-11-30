@@ -21,7 +21,7 @@ ssd1306_start_update(ssd1306_t *device)
 }
 
 
-void
+static void
 ssd1306_switch_i2c_mode(ssd1306_t *device, ssd1306_i2c_mode_t mode)
 {
   if (device->mode != mode) {
@@ -32,7 +32,7 @@ ssd1306_switch_i2c_mode(ssd1306_t *device, ssd1306_i2c_mode_t mode)
 }
 
 
-void
+static void
 ssd1306_send_command(ssd1306_t *device, uint8_t command_byte)
 {
   ssd1306_switch_i2c_mode(device, SSD1306_I2C_MODE_COMMAND);
@@ -40,7 +40,7 @@ ssd1306_send_command(ssd1306_t *device, uint8_t command_byte)
 }
 
 
-void
+static void
 ssd1306_send_data(ssd1306_t *device, uint8_t data_byte)
 {
   ssd1306_switch_i2c_mode(device, SSD1306_I2C_MODE_DATA);
@@ -64,4 +64,15 @@ void
 ssd1306_put_segment(ssd1306_t *device, uint8_t segment)
 {
   ssd1306_send_data(device, segment);
+}
+
+
+void
+ssd1306_put_segments(ssd1306_t *device, uint8_t *segments, uint8_t length)
+{
+  ssd1306_switch_i2c_mode(device, SSD1306_I2C_MODE_DATA);
+
+  for (uint8_t i = 0; i < length; ++i) {
+    i2c_async_send_data(segments[i]);
+  }
 }

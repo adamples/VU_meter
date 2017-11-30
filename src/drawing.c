@@ -32,14 +32,28 @@ void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, u
 }
 
 
+#define int_min(a, b) (((a) < (b)) ? (a) : (b))
+#define int_max(a, b) (((a) > (b)) ? (a) : (b))
+
+#include <util/delay.h>
+
 static void
-needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, uint8_t* segments)
+needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments)
 {
   needle_sprite_t *needle = (needle_sprite_t *) sprite;
 
+  //~ int8_t column_start = needle->column[page * SSD1306_PAGE_HEIGHT];
+  //~ int8_t column_end = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+  //~ int8_t column_min = int_min(column_start, column_end);
+  //~ int8_t column_max = int_max(column_start, column_end);
+
+  //~ if (column_max + 3 < column_a || column_min > column_b + 3) {
+    //~ return;
+  //~ }
+
   for (uint8_t column = column_a; column <= column_b; ++column) {
 
-    uint8_t result = *segments;
+    uint8_t result = segments->value;
 
     for (uint8_t i = 0; i < 8; ++i) {
       uint8_t row = page * 8 + i;
@@ -61,7 +75,7 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
       }
     }
 
-    *segments = result;
+    segments->value = result;
     ++segments;
   }
 }
