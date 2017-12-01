@@ -34,7 +34,7 @@ void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, u
 
 
 static void
-needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments)
+needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments)
 {
   needle_sprite_t *needle = (needle_sprite_t *) sprite;
 
@@ -49,7 +49,7 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
 
   for (uint8_t column = column_a; column <= column_b; ++column) {
 
-    uint8_t result = segments->value;
+    uint8_t result = *segments;
 
     for (uint8_t i = 0; i < 8; ++i) {
       uint8_t row = page * 8 + i;
@@ -71,7 +71,7 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
       }
     }
 
-    segments->value = result;
+    *segments = result;
     ++segments;
   }
 }

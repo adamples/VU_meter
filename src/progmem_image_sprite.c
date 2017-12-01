@@ -7,7 +7,7 @@
 
 
 static void
-progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, segment_t* segments)
+progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments)
 {
   progmem_image_sprite_t *image = (progmem_image_sprite_t *) sprite;
 
@@ -23,10 +23,10 @@ progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, ui
   int8_t source_page = page - image->page;
 
   const uint8_t *source = image->data + source_column_a + source_page * image->width;
-  segment_t *target = segments + target_column_a - column_a;
+  ssd1306_segment_t *target = segments + target_column_a - column_a;
 
   for (uint8_t i = target_column_a; i <= target_column_b; ++i) {
-    target->value = pgm_read_byte(source);
+    *target = pgm_read_byte(source);
     ++target;
     ++source;
   }

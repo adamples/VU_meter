@@ -11,6 +11,26 @@
 #include "i2c_hw.h"
 
 
+typedef enum i2c_command_code_t_ {
+  I2C_COMMAND_START = 0x01,
+  I2C_COMMAND_SEND_DATA = 0x02,
+  I2C_COMMAND_STOP = 0x03,
+  I2C_COMMAND_PENDING = 0x04
+} i2c_command_code_t;
+
+
+typedef struct i2c_command_t_ {
+  i2c_command_code_t code;
+  uint8_t data;
+} i2c_command_t;
+
+
+typedef struct i2c_command_buffer_t_ {
+  uint8_t length;
+  i2c_command_t commands[I2C_BUFFER_SIZE];
+} i2c_command_buffer_t;
+
+
 typedef struct i2c_task_t_ {
   i2c_callback_t callback;
   void *data;
@@ -104,7 +124,7 @@ i2c_queue_fetch_commands(void)
     bool keep_task = false;
 
     NONATOMIC_BLOCK(NONATOMIC_FORCEOFF) {
-      keep_task = task->callback(I2C_QUEUE.back_buffer, task->data);
+      keep_task = task->callback(task->data);
     }
 
     assert(I2C_QUEUE.back_buffer->length > 0);
@@ -277,7 +297,7 @@ i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
 static inline void
 i2c_produce_command(i2c_command_code_t code, uint8_t data)
 {
-  assert(I2C_QUEUE.back_buffer->length < I2C_BUFFER_SIZE);
+  assert(I2C_BUFFER_SIZE - I2C_QUEUE.back_buffer->length >= 1);
 
   i2c_command_t *command = &(I2C_QUEUE.back_buffer->commands[I2C_QUEUE.back_buffer->length]);
 
@@ -289,9 +309,27 @@ i2c_produce_command(i2c_command_code_t code, uint8_t data)
 
 
 void
-i2c_async_send_data(uint8_t data)
+i2c_async_send_byte(uint8_t data)
 {
   i2c_produce_command(I2C_COMMAND_SEND_DATA, data);
+}
+
+
+void
+i2c_async_send_bytes(uint8_t *data, uint8_t n)
+{
+  assert(n > 0);
+  assert(I2C_BUFFER_SIZE - I2C_QUEUE.back_buffer->length >= n);
+
+  i2c_command_t *commands = &(I2C_QUEUE.back_buffer->commands[I2C_QUEUE.back_buffer->length]);
+
+  for (uint8_t i = 0; i < n; ++i) {
+    commands[i].code = I2C_COMMAND_SEND_DATA;
+    commands[i].data = data[i];
+  }
+
+  I2C_QUEUE.back_buffer->length += n;
+  assert(I2C_QUEUE.back_buffer->length > 0);
 }
 
 

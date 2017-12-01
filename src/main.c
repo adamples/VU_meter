@@ -49,7 +49,7 @@ typedef struct write_const_t_ {
 
 
 bool
-i2c_write_const_cb(i2c_command_buffer_t *commands, void *data)
+i2c_write_const_cb(void *data)
 {
   write_const_t *wc = (write_const_t *) data;
 
@@ -59,7 +59,7 @@ i2c_write_const_cb(i2c_command_buffer_t *commands, void *data)
 
   if (wc->counter < wc->length) {
     for (uint8_t i = 0; i < 16 && wc->counter < wc->length; ++i) {
-      i2c_async_send_data(wc->data[wc->counter]);
+      i2c_async_send_byte(wc->data[wc->counter]);
       ++wc->counter;
     }
 

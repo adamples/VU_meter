@@ -2,8 +2,7 @@
 #define SSD1306_H
 
 #include <stdint.h>
-#include "i2c.h"
-
+#include <stdbool.h>
 
 #define SSD1306_COLUMNS_N (128)
 #define SSD1306_PAGES_N (8)
@@ -36,6 +35,8 @@
 #define SSD1306_CMD_NOP (0xE3)
 
 
+typedef uint8_t ssd1306_segment_t;
+
 typedef enum ssd1306_i2c_mode_t_ {
   SSD1306_I2C_MODE_COMMAND = 0x00,
   SSD1306_I2C_MODE_DATA = 0x40,
@@ -44,20 +45,23 @@ typedef enum ssd1306_i2c_mode_t_ {
 
 typedef struct ssd1306_t_ {
   uint8_t address;
-  uint8_t cursor_x;
+  uint8_t cursor_column;
   uint8_t cursor_page;
-  ssd1306_i2c_mode_t mode;
+  ssd1306_i2c_mode_t i2c_mode;
 } ssd1306_t;
 
-typedef void (*update_callback_t)(ssd1306_t *device);
+typedef bool (*ssd1306_update_callback_t)(void *data);
 
 
 void ssd1306_init(ssd1306_t *device, uint8_t address);
-void ssd1306_start_update(ssd1306_t *device);
+
+void ssd1306_start_update(ssd1306_t *device, ssd1306_update_callback_t callback, void *data);
 
 void ssd1306_move_to(ssd1306_t *device, uint8_t column, uint8_t page);
-void ssd1306_put_segment(ssd1306_t *device, uint8_t segment);
-void ssd1306_put_segments(ssd1306_t *device, uint8_t *segments, uint8_t length);
+void ssd1306_put_segments(ssd1306_t *device, uint8_t column, uint8_t page,
+                          uint8_t width, uint8_t *segments);
+
+void ssd1306_finish_update(ssd1306_t *device);
 
 
 #endif /* SSD1306_H */
