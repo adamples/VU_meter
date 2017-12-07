@@ -9,6 +9,7 @@ C_SRC= \
 $(TARGET).c \
 lcd.c \
 fault.c \
+fixed_point.c \
 benchmark.c \
 ring_buffer.c \
 i2c.c \
