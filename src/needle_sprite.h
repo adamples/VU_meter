@@ -13,7 +13,7 @@ typedef struct needle_sprite_t_ {
 
 
 void needle_sprite_init(needle_sprite_t *needle);
-void needle_sprite_draw(needle_sprite_t *needle, uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by);
+void needle_sprite_draw(needle_sprite_t *needle, uint8_t angle);
 
 void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by);
 

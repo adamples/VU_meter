@@ -10,10 +10,10 @@
 #include <stdint.h>
 
 
-#define LCD_D7_PORT C
-#define LCD_D7_PIN 3
-#define LCD_D6_PORT C
-#define LCD_D6_PIN 2
+#define LCD_D7_PORT D
+#define LCD_D7_PIN 4
+#define LCD_D6_PORT D
+#define LCD_D6_PIN 7
 #define LCD_D5_PORT C
 #define LCD_D5_PIN 1
 #define LCD_D4_PORT C

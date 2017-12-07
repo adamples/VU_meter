@@ -8,4 +8,7 @@
 #define DISPLAY_A_ADDRESS (0x78)
 #define DISPLAY_B_ADDRESS (0x7A)
 
+
+#define NEEDLE_RESOLUTION (128)
+
 #endif /* CONFIG_H */

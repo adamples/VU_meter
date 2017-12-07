@@ -1,8 +1,11 @@
 #include "needle_sprite.h"
 #include <stdlib.h>
 #include <string.h>
+#include <avr/pgmspace.h>
 #include "utils.h"
 #include "assert.h"
+#include "needle_coordinates.h"
+#include "ssd1306.h"
 
 
 void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
@@ -87,7 +90,10 @@ needle_sprite_init(needle_sprite_t *needle)
 
 
 void
-needle_sprite_draw(needle_sprite_t *needle, uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
+needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
 {
-  draw_line_23_octants(needle->column, ax, ay, bx, by);
+  uint8_t index = (uint16_t) angle * NEEDLE_RESOLUTION / 256;
+  uint8_t ax = pgm_read_byte(&(NEEDLE_COORDINATES[index].x));
+  uint8_t ay = pgm_read_byte(&(NEEDLE_COORDINATES[index].y));
+  draw_line_23_octants(needle->column, ax, ay, NEEDLE_AXIS_X, NEEDLE_AXIS_Y);
 }

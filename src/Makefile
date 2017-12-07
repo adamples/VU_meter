@@ -17,7 +17,9 @@ peak_indicator.c \
 ssd1306.c \
 display.c \
 progmem_image_sprite.c \
-needle_sprite.c
+needle_coordinates.c \
+needle_sprite.c \
+adc.c
 
 C_OBJS=$(C_SRC:.c=.o)
 OBJS=$(C_OBJS)
@@ -32,7 +34,8 @@ OBJCOPY=avr-objcopy
 OBJDUMP=avr-objdump
 SIZE=avr-size
 RM=rm -f --
-IMAGE2C=python3 image2c.py
+PYTHON=python3
+IMAGE2C=$(PYTHON) image2c.py
 
 
 CFLAGS+=-mmcu=$(MCU)
@@ -43,7 +46,7 @@ CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror
 CFLAGS+=-std=c99
-CFLAGS+=-DNDEBUG
+#~ CFLAGS+=-DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
@@ -77,6 +80,9 @@ background.c: images/background.png
 
 peak_indicator.c: images/peak_indicator.png
 	$(IMAGE2C) $< $@ PEAK_INDICATOR
+
+needle_coordinates.c: config.h Makefile calculate_needle_coordinates.py
+	$(PYTHON) calculate_needle_coordinates.py 128 > $@
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(TARGET_ARCH) $^ $(LOADLIBES) $(LDLIBS) -o $@

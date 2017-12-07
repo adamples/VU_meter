@@ -14,6 +14,7 @@
 #include "progmem_image_sprite.h"
 #include "needle_sprite.h"
 #include "benchmark.h"
+#include "adc.h"
 
 
 static const uint8_t OLED_INIT_SEQUENCE[] = {
@@ -83,11 +84,13 @@ int main(void)
   progmem_image_sprite_t background;
   progmem_image_sprite_t peak_indicator;
   needle_sprite_t needle_a;
+  needle_sprite_t needle_b;
   ssd1306_t device_a;
   ssd1306_t device_b;
   display_t display_a;
   display_t display_b;
 
+  adc_init();
   lcd_init();
   i2c_init();
   lcd_puts("Started");
@@ -96,6 +99,7 @@ int main(void)
   progmem_image_sprite_init(&background, BACKGROUND, 0, 0);
   progmem_image_sprite_init(&peak_indicator, PEAK_INDICATOR, 107, 7);
   needle_sprite_init(&needle_a);
+  needle_sprite_init(&needle_b);
 
   ssd1306_init(&device_a, DISPLAY_A_ADDRESS);
   ssd1306_init(&device_b, DISPLAY_B_ADDRESS);
@@ -108,9 +112,9 @@ int main(void)
 
   display_add_sprite(&display_b, &background.sprite);
   display_add_sprite(&display_b, &peak_indicator.sprite);
-  display_add_sprite(&display_b, &needle_a.sprite);
+  display_add_sprite(&display_b, &needle_b.sprite);
 
-  needle_sprite_draw(&needle_a, 0, 24, 64, 96);
+  needle_sprite_draw(&needle_a, 64);
 
   i2c_transmit_async(DISPLAY_A_ADDRESS, i2c_write_const_cb, &oled_init_sequence);
   i2c_transmit_async(DISPLAY_B_ADDRESS, i2c_write_const_cb, &oled_init_sequence);
@@ -122,14 +126,14 @@ int main(void)
 
   while (!i2c_is_idle());
 
-  BENCHMARK(display_update, {
-    display_update_async(&display_a);
+  //~ BENCHMARK(display_update, {
+    //~ display_update_async(&display_a);
 
-    while (!i2c_is_idle()) {
-      _delay_us(100);
-      ++i;
-    }
-  });
+    //~ while (!i2c_is_idle()) {
+      //~ _delay_us(100);
+      //~ ++i;
+    //~ }
+  //~ });
 
   lcd_goto(8, 1);
   lcd_put_int(i);
@@ -137,29 +141,18 @@ int main(void)
 
   //~ while (1);
 
-  float angle = -0.73;
-  float v = 0.05;
-  float a = -0.001;
+  uint8_t angle = 0;
+  uint8_t angle2 = 0;
 
   while (1) {
-    v += a;
-    angle += v;
-    if (angle < -0.73) {
-      angle = -0.73 * 2 - angle;
-      v = -v * 0.5;
-    }
-
-    //~ angle = 0.264;
-
-    float dx = sin(angle);
-    float dy = cos(angle);
-    float x = 64 + dx * 96;
-    float y = 96 - dy * 96;
+    angle = adc_get() / 4;
+    angle2 = (uint16_t) (angle * 1 + angle2 * 7) / 8;
 
     while (!i2c_is_idle());
 
-    needle_sprite_draw(&needle_a, x, y, 64, 96);
-    peak_indicator.sprite.visible = (x > 90);
+    needle_sprite_draw(&needle_a, angle);
+    needle_sprite_draw(&needle_b, angle2);
+    peak_indicator.sprite.visible = (angle > 192);
 
     display_update_async(&display_a);
     display_update_async(&display_b);
