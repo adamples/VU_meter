@@ -5,7 +5,7 @@
 
 #define FIX_INT_DIGITS (8)
 #define FIX_FRAC_DIGITS (8)
-#define FIX_HIGH_PRECISION (1)
+#define FIX_HIGH_PRECISION (0)
 
 /* - end of User settings --------------------------------------------------- */
 
@@ -14,6 +14,7 @@
 
 #define FIX_DIGITS (FIX_INT_DIGITS + FIX_FRAC_DIGITS)
 #define FIX_ONE ((fix_t) 1 << FIX_FRAC_DIGITS)
+#define FIX_ZERO ((fix_t) 0)
 
 #define DFIX_INT_DIGITS (FIX_INT_DIGITS * 2)
 #define DFIX_FRAC_DIGITS (FIX_FRAC_DIGITS * 2)
@@ -69,10 +70,10 @@
 #define FIX_NEG(a) (-(a))
 
 #define FIX_ADD(a, b) ((a) + (b))
-#define FIX_ADD_INPL(a, b) do { a += b; } while (0)
+#define FIX_ADD_INPL(a, b) do { (a) += (b); } while (0)
 
 #define FIX_SUB(a, b) ((a) - (b))
-#define FIX_SUB_INPL(a, b) do { a -= b; } while (0)
+#define FIX_SUB_INPL(a, b) do { (a) -= (b); } while (0)
 
 #define FIX_DMUL(a, b) ((dfix_t) (a) * (b))
 #define FIX_D2S(a) FIX_DIV_BY_INT(a, FIX_ONE)
