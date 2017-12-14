@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <util/atomic.h>
 #include <util/twi.h>
 #include "config.h"
@@ -261,7 +262,8 @@ void i2c_init(void)
 }
 
 
-bool i2c_is_idle(void)
+bool
+i2c_is_idle(void)
 {
   bool result = false;
 
@@ -270,6 +272,13 @@ bool i2c_is_idle(void)
   }
 
   return result;
+}
+
+
+void
+i2c_wait(void)
+{
+  while (!i2c_is_idle());
 }
 
 
@@ -350,6 +359,51 @@ void
 i2c_async_end_transmission(void)
 {
   i2c_produce_command(I2C_COMMAND_STOP, 0);
+}
+
+
+typedef struct transmit_progmem_t_ {
+  uint16_t length;
+  uint16_t counter;
+  const uint8_t *data;
+} transmit_progmem_t;
+
+
+bool
+i2c_transmit_progmem_cb(void *cb_data)
+{
+  transmit_progmem_t *ctrl = (transmit_progmem_t *) cb_data;
+
+  if (ctrl->counter == 0) {
+    i2c_async_send_start();
+  }
+
+  if (ctrl->counter < ctrl->length) {
+    for (uint8_t i = 0; i < 16 && ctrl->counter < ctrl->length; ++i) {
+      i2c_async_send_byte(pgm_read_byte(ctrl->data + ctrl->counter));
+      ++ctrl->counter;
+    }
+
+    return true;
+  }
+
+  ctrl->counter = 0;
+  i2c_async_end_transmission();
+  return false;
+
+}
+
+void
+i2c_transmit_progmem(uint8_t address, const uint8_t *data, uint16_t length)
+{
+  transmit_progmem_t ctrl;
+
+  ctrl.length = length;
+  ctrl.counter = 0;
+  ctrl.data = data;
+
+  i2c_transmit_async(address, i2c_transmit_progmem_cb, &ctrl);
+  i2c_wait();
 }
 
 /* end of User API ---------------------------------------------------------- */

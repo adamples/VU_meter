@@ -18,6 +18,9 @@ void i2c_async_send_bytes(uint8_t *data, uint8_t n);
 void i2c_async_send_start(void);
 void i2c_async_end_transmission(void);
 bool i2c_is_idle(void);
+void i2c_wait(void);
+
+void i2c_transmit_progmem(uint8_t address, const uint8_t *data, uint16_t length);
 
 
 #endif /* I2C_H */
