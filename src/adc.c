@@ -5,47 +5,30 @@
 #include <util/atomic.h>
 
 
-static volatile uint16_t ADC_OUTPUT = 0;
-
-
-void
-adc_init(void)
+uint16_t
+adc_get(uint8_t channel)
 {
-  /* Reference is AREF (external) */
-  ADMUX = 0; // _BV(REFS0);
+  ADMUX = 0;
+  ADCSRA = 0;
+  ADCSRB = 0;
 
-  /* Input is ADC2 */
-  ADMUX |= _BV(MUX1);
+  /* Input is selected based on channel */
+  DDRC &= ~_BV(channel);
+  ADMUX |= channel;
 
   /* Set clock to CLK/128 = 156.25kHz */
   ADCSRA |= _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
 
-  /* Auto-trigger from ADIF flag: free-running mode */
-  ADCSRB |= 0;
-  ADCSRA |= _BV(ADATE);
-
-  /* Enable ADC interrupt */
-  ADCSRA |= _BV(ADIE);
-
   /* Enable ADC and start continuous conversion */
   ADCSRA |= _BV(ADEN) | _BV(ADSC);
-}
 
+  while (ADCSRA & _BV(ADSC));
 
-uint16_t
-adc_get(void)
-{
-  uint16_t result = 0;
+  uint16_t result = ADC;
 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = ADC_OUTPUT;
-  }
+  ADMUX = 0;
+  ADCSRA = 0;
+  ADCSRB = 0;
 
   return result;
-}
-
-
-ISR(ADC_vect)
-{
-  ADC_OUTPUT = ADC;
 }

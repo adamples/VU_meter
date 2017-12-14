@@ -28,7 +28,6 @@ int main(void)
   display_t display_a;
   display_t display_b;
 
-  adc_init();
   lcd_init();
   i2c_init();
   lcd_puts("Started");
@@ -58,10 +57,8 @@ int main(void)
   display_update_async(&display_b);
   _delay_ms(100);
 
-  uint16_t i = 0;
-
-  i2c_wait();
-
+  //~ uint16_t i = 0;
+  //~ i2c_wait();
   //~ BENCHMARK(display_update, {
     //~ display_update_async(&display_a);
 
@@ -71,31 +68,20 @@ int main(void)
     //~ }
   //~ });
 
-  lcd_goto(8, 1);
-  lcd_put_int(i);
-  lcd_puts("00us");
-
-  //~ while (1);
-
-  uint8_t angle = 0;
-  uint8_t angle2 = 0;
+  uint8_t angle_a = 0;
+  uint8_t angle_b = 0;
 
   while (1) {
-    angle = adc_get() / 4;
-    angle2 = (uint16_t) (angle * 1 + angle2 * 7) / 8;
+    angle_a = 255 - adc_get(2) / 4;
+    angle_b = 255 - adc_get(3) / 4;
 
     i2c_wait();
 
-    needle_sprite_draw(&needle_a, angle);
-    needle_sprite_draw(&needle_b, angle2);
-    peak_indicator.sprite.visible = (angle > 192);
+    needle_sprite_draw(&needle_a, angle_a);
+    needle_sprite_draw(&needle_b, angle_b);
+    peak_indicator.sprite.visible = (angle_a > 192);
 
     display_update_async(&display_a);
     display_update_async(&display_b);
-
-    //~ lcd_clear();
-    //~ lcd_put_int(angle * 1000);
-    //~ lcd_puts("rad");
-    //~ _delay_ms(500);
   }
 }
