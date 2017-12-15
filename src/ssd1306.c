@@ -14,7 +14,7 @@ static const uint8_t SSD1306_INIT_SEQUENCE[] PROGMEM = {
     SSD1306_CMD_SET_DISPLAY_START_LINE(0x00),
     SSD1306_CMD_SET_MEMORY_ADDRESSING_MODE, 0x00,
     SSD1306_CMD_SET_SEGMENT_REMAP(true), SSD1306_CMD_SET_COM_SCAN_DIRECTION_DEC,
-    /* rotated: SSD1306_SEGREMAP | 0x0, SSD1306_COMSCANINC */
+    /* rotated: SSD1306_CMD_SET_SEGMENT_REMAP(false), SSD1306_CMD_SET_COM_SCAN_DIRECTION_INC */
     SSD1306_CMD_SET_COM_PINS_HW_CONF, 0x12,
     SSD1306_CMD_SET_PRECHARGE_PERIOD, 0x11,
     SSD1306_CMD_SET_VCOMH_DESELECT_LEVEL, 0x40,
@@ -94,11 +94,6 @@ ssd1306_write_gddram(ssd1306_t *device, uint8_t length, uint8_t *data)
   i2c_async_send_bytes(data, length);
 
   device->cursor_column += length;
-
-  while (device->cursor_column >= SSD1306_COLUMNS_N) {
-    device->cursor_column -= SSD1306_COLUMNS_N;
-    ++device->cursor_page;
-  }
 }
 
 

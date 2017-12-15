@@ -17,6 +17,22 @@
 #include "adc.h"
 
 
+region_t REGIONS[8] = {
+  { .page = 0, .start_column = 52, .end_column = 75 },
+  { .page = 1, .start_column = 52, .end_column = 75 },
+  { .page = 2, .start_column = 52, .end_column = 75 },
+  { .page = 3, .start_column = 52, .end_column = 75 },
+  { .page = 4, .start_column = 52, .end_column = 75 },
+  { .page = 5, .start_column = 52, .end_column = 75 },
+  { .page = 6, .start_column = 52, .end_column = 75 },
+  { .page = 7, .start_column = 52, .end_column = 75 }
+};
+
+update_extents_t UPDATE_EXTENTS = {
+  .regions_n = 8,
+  .regions = REGIONS
+};
+
 int main(void)
 {
   progmem_image_sprite_t background;
@@ -60,7 +76,7 @@ int main(void)
   //~ uint16_t i = 0;
   //~ i2c_wait();
   //~ BENCHMARK(display_update, {
-    //~ display_update_async(&display_a);
+    //~ display_update_partial_async(&display_a, &UPDATE_EXTENTS);
 
     //~ while (!i2c_is_idle()) {
       //~ _delay_us(100);
@@ -81,7 +97,7 @@ int main(void)
     needle_sprite_draw(&needle_b, angle_b);
     peak_indicator.sprite.visible = (angle_a > 192);
 
-    display_update_async(&display_a);
-    display_update_async(&display_b);
+    display_update_partial_async(&display_a, &UPDATE_EXTENTS);
+    display_update_partial_async(&display_b, &UPDATE_EXTENTS);
   }
 }
