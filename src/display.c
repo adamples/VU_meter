@@ -1,4 +1,5 @@
 #include "display.h"
+#include <stdlib.h>
 #include <avr/pgmspace.h>
 #include "utils.h"
 #include "assert.h"
@@ -137,4 +138,38 @@ display_update_partial_async(display_t *display, update_extents_t *extents)
     (ssd1306_update_callback_t) display_update_partial_async_cb,
     display
   );
+}
+
+
+void
+update_extents_reset(update_extents_t *extents)
+{
+  extents->regions_n = 0;
+}
+
+
+void
+update_extents_add_region(update_extents_t *extents, uint8_t page, uint8_t start_column, uint8_t end_column)
+{
+  extents->regions[extents->regions_n].page = page;
+  extents->regions[extents->regions_n].start_column = start_column;
+  extents->regions[extents->regions_n].end_column = end_column;
+  ++(extents->regions_n);
+}
+
+
+int
+cmp_regions_by_page(const void *a, const void *b)
+{
+  region_t *region_a = (region_t *) a;
+  region_t *region_b = (region_t *) b;
+
+  return (region_a->page > region_b->page) - (region_a->page < region_b->page);
+}
+
+
+void
+update_extents_optimize(update_extents_t *extents)
+{
+  qsort(extents->regions, extents->regions_n, sizeof(region_t), cmp_regions_by_page);
 }

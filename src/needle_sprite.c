@@ -8,7 +8,8 @@
 #include "ssd1306.h"
 
 
-void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
+static void
+draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_t by)
 {
   int8_t error = 0;
   int8_t delta_err = abs(bx - ax);
@@ -35,24 +36,27 @@ void draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, u
   }
 }
 
-
 static void
 needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments)
 {
   needle_sprite_t *needle = (needle_sprite_t *) sprite;
 
-  int8_t column_start = needle->column[page * SSD1306_PAGE_HEIGHT];
-  int8_t column_end = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
-  int8_t column_min = int_min(column_start, column_end);
-  int8_t column_max = int_max(column_start, column_end);
+  int8_t start_column = needle->start_column[page];
+  int8_t end_column = needle->end_column[page];
 
-  if (column_max + 3 < column_a || column_min > column_b + 3) {
+  if (start_column == -128) {
     return;
   }
 
-  for (uint8_t column = column_a; column <= column_b; ++column) {
+  start_column = int_max(start_column, column_a);
+  end_column = int_min(end_column, column_b);
 
-    uint8_t result = *segments;
+  for (uint8_t column = start_column; column <= end_column; ++column) {
+    uint8_t segment = segments[column - column_a];
+
+    //~ if (column == needle->start_column[page] || column == needle->end_column[page]) {
+      //~ segment = 0xff;
+    //~ }
 
     for (uint8_t i = 0; i < 8; ++i) {
       uint8_t row = page * 8 + i;
@@ -67,15 +71,14 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
       if (d < 0) d = -d;// - 1;
 
       if (d == 0) {
-        result |= bit;
+        segment |= bit;
       }
       else if (d <= 2) {
-        result &= ~bit;
+        segment &= ~bit;
       }
     }
 
-    *segments = result;
-    ++segments;
+    segments[column - column_a] = segment;
   }
 }
 
@@ -95,5 +98,74 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
   uint8_t index = (uint16_t) angle * NEEDLE_RESOLUTION / 256;
   uint8_t ax = pgm_read_byte(&(NEEDLE_COORDINATES[index].x));
   uint8_t ay = pgm_read_byte(&(NEEDLE_COORDINATES[index].y));
+
   draw_line_23_octants(needle->column, ax, ay, NEEDLE_AXIS_X, NEEDLE_AXIS_Y);
+
+  uint8_t page = 0;
+
+  /* Pages over the needle */
+  for (; page < ay / SSD1306_PAGE_HEIGHT; ++page) {
+    needle->start_column[page] = -128;
+    needle->end_column[page] = -128;
+  }
+
+  /* Page, where the needle has it's tip */
+  if (ax <= NEEDLE_AXIS_X) {
+    needle->start_column[page] = ax;
+    needle->end_column[page] = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+  }
+  else {
+    needle->start_column[page] = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+    needle->end_column[page] = ax;
+  }
+
+  ++page;
+
+  /* Pages below the needle tip */
+  for (; page < SSD1306_PAGES_N; ++page) {
+    int8_t top_x = needle->column[page * SSD1306_PAGE_HEIGHT];
+    int8_t bottom_x = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+    needle->start_column[page] = int_min(top_x, bottom_x);
+    needle->end_column[page] = int_max(top_x, bottom_x);
+  }
+
+  /* Take account of needle shadow width */
+  for (page = 0; page < SSD1306_PAGES_N; ++page) {
+    if (needle->start_column[page] == -128) {
+      continue;
+    }
+
+    if (needle->start_column[page] <= 3) {
+      needle->start_column[page] = 0;
+    }
+    else {
+      needle->start_column[page] -= 3;
+    }
+
+    if (needle->end_column[page] >= SSD1306_WIDTH - 3) {
+      needle->end_column[page] = SSD1306_WIDTH - 1;
+    }
+    else {
+      needle->end_column[page] += 3;
+    }
+  }
+
+#ifndef NDEBUG
+  for (page = 0; page < SSD1306_PAGES_N; ++page) {
+    assert(needle->start_column[page] <= needle->end_column[page]);
+  }
+#endif
+}
+
+
+void
+needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t *extents)
+{
+  for (uint8_t page = 0; page < SSD1306_PAGES_N; ++page) {
+    if (needle->start_column[page] == -128) {
+      continue;
+    }
+
+    update_extents_add_region(extents, page, needle->start_column[page], needle->end_column[page]);
+  }
 }

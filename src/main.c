@@ -33,6 +33,17 @@ update_extents_t UPDATE_EXTENTS = {
   .regions = REGIONS
 };
 
+
+void
+status(char *str)
+{
+  lcd_clear();
+  lcd_puts("Status:");
+  lcd_goto(0, 1);
+  lcd_puts(str);
+}
+
+
 int main(void)
 {
   progmem_image_sprite_t background;
@@ -46,8 +57,8 @@ int main(void)
 
   lcd_init();
   i2c_init();
-  lcd_puts("Started");
   sei();
+  status("started");
 
   progmem_image_sprite_init(&background, BACKGROUND, 0, 0);
   progmem_image_sprite_init(&peak_indicator, PEAK_INDICATOR, 107, 7);
@@ -58,6 +69,7 @@ int main(void)
   ssd1306_init(&device_b, DISPLAY_B_ADDRESS);
   display_init(&display_a, &device_a);
   display_init(&display_b, &device_b);
+  status("disp. init.");
 
   display_add_sprite(&display_a, &background.sprite);
   display_add_sprite(&display_a, &peak_indicator.sprite);
@@ -69,20 +81,17 @@ int main(void)
 
   needle_sprite_draw(&needle_a, 64);
 
+  status("needle drawn");
+
   display_update_async(&display_a);
+  status("disp. a updt.");
+
   display_update_async(&display_b);
+  status("disp. b updt.");
+
   _delay_ms(100);
-
-  //~ uint16_t i = 0;
-  //~ i2c_wait();
-  //~ BENCHMARK(display_update, {
-    //~ display_update_partial_async(&display_a, &UPDATE_EXTENTS);
-
-    //~ while (!i2c_is_idle()) {
-      //~ _delay_us(100);
-      //~ ++i;
-    //~ }
-  //~ });
+  status("i2c ready");
+  i2c_wait();
 
   uint8_t angle_a = 0;
   uint8_t angle_b = 0;
@@ -93,11 +102,34 @@ int main(void)
 
     i2c_wait();
 
+    update_extents_reset(&UPDATE_EXTENTS);
+    needle_sprite_add_to_extents(&needle_a, &UPDATE_EXTENTS);
+
     needle_sprite_draw(&needle_a, angle_a);
     needle_sprite_draw(&needle_b, angle_b);
     peak_indicator.sprite.visible = (angle_a > 192);
 
+    needle_sprite_add_to_extents(&needle_a, &UPDATE_EXTENTS);
+    update_extents_optimize(&UPDATE_EXTENTS);
+
+    //~ display_update_async(&display_a);
+    //~ display_update_async(&display_b);
     display_update_partial_async(&display_a, &UPDATE_EXTENTS);
-    display_update_partial_async(&display_b, &UPDATE_EXTENTS);
+    //~ display_update_partial_async(&display_b, &UPDATE_EXTENTS);
+
+    //~ uint16_t i = 0;
+    //~ i2c_wait();
+    //~ BENCHMARK(display_update, {
+      //~ display_update_partial_async(&display_a, &UPDATE_EXTENTS);
+
+      //~ while (!i2c_is_idle()) {
+        //~ _delay_us(100);
+        //~ ++i;
+      //~ }
+    //~ });
+    //~ lcd_putc(' ');
+    //~ lcd_put_int(i);
+    //~ lcd_puts("  us");
+    //~ _delay_ms(100);
   }
 }

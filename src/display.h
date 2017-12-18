@@ -10,11 +10,9 @@
 
 typedef struct sprite_t_ sprite_t;
 
-typedef void (*sprite_get_extent_t)(sprite_t *sprite, uint8_t page, uint8_t *min, uint8_t *max);
 typedef void (*sprite_render_t)(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments);
 
 struct sprite_t_ {
-  sprite_get_extent_t get_extent;
   sprite_render_t render;
   bool visible;
 };
@@ -62,5 +60,9 @@ void display_init(display_t *display, ssd1306_t *device);
 void display_add_sprite(display_t *display, sprite_t *sprite);
 void display_update_async(display_t *display);
 void display_update_partial_async(display_t *display, update_extents_t *extents);
+
+void update_extents_reset(update_extents_t *extents);
+void update_extents_add_region(update_extents_t *extents, uint8_t page, uint8_t start_column, uint8_t end_column);
+void update_extents_optimize(update_extents_t *extents);
 
 #endif /* DISPLAY_H */
