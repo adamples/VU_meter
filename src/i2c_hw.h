@@ -15,7 +15,7 @@ i2c_hw_init(void)
 
 
 inline void
-i2c_hw_wait(void)
+i2c_hw_wait_for_int(void)
 {
   while (!(TWCR & _BV(TWINT)));
 }
@@ -23,6 +23,13 @@ i2c_hw_wait(void)
 
 inline void
 i2c_hw_send_start_condition(void)
+{
+  TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA);
+}
+
+
+inline void
+i2c_hw_send_start_condition_int(void)
 {
   TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWIE) | _BV(TWSTA);
 }
@@ -40,6 +47,14 @@ inline void
 i2c_hw_send_byte(uint8_t octet)
 {
   TWDR = octet;
+  TWCR = _BV(TWINT) | _BV(TWEN);
+}
+
+
+inline void
+i2c_hw_send_byte_int(uint8_t octet)
+{
+  TWDR = octet;
   TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWIE);
 }
 
@@ -52,7 +67,7 @@ i2c_hw_go_idle(void)
 
 
 inline void
-i2c_hw_disable_interrupt(void)
+i2c_hw_disable_int(void)
 {
   /* Clear InterruptEnable bit, but don't write INT bit, so it doesn't get cleared */
   TWCR &= ~_BV(TWIE) & ~_BV(TWINT);

@@ -70,8 +70,8 @@ int main(void)
   display_add_sprite(&display_b, &needle_b.sprite);
 
   needle_sprite_draw(&needle_a, 64);
-  display_update_async(&display_a);
-  display_update_async(&display_b);
+  //~ display_update_async(&display_a);
+  //~ display_update_async(&display_b);
 
   _delay_ms(100);
   i2c_wait();
@@ -98,7 +98,7 @@ int main(void)
     //~ display_update_async(&display_a);
     //~ display_update_async(&display_b);
     display_update_partial_async(&display_a, &UPDATE_EXTENTS);
-    //~ display_update_partial_async(&display_b, &UPDATE_EXTENTS);
+    display_update_partial_async(&display_b, &UPDATE_EXTENTS);
 
     //~ uint16_t i = 0;
     //~ i2c_wait();
