@@ -17,21 +17,22 @@
 #include "adc.h"
 
 
-region_t REGIONS[8] = {
-  { .page = 0, .start_column = 52, .end_column = 75 },
-  { .page = 1, .start_column = 52, .end_column = 75 },
-  { .page = 2, .start_column = 52, .end_column = 75 },
-  { .page = 3, .start_column = 52, .end_column = 75 },
-  { .page = 4, .start_column = 52, .end_column = 75 },
-  { .page = 5, .start_column = 52, .end_column = 75 },
-  { .page = 6, .start_column = 52, .end_column = 75 },
-  { .page = 7, .start_column = 52, .end_column = 75 }
-};
+region_t REGIONS[18] = { 0 };
 
 update_extents_t UPDATE_EXTENTS = {
-  .regions_n = 8,
+  .regions_n = 0,
   .regions = REGIONS
 };
+
+
+progmem_image_sprite_t background;
+progmem_image_sprite_t peak_indicator;
+needle_sprite_t needle_a;
+needle_sprite_t needle_b;
+ssd1306_t device_a;
+ssd1306_t device_b;
+display_t display_a;
+display_t display_b;
 
 
 void
@@ -46,19 +47,9 @@ status(char *str)
 
 int main(void)
 {
-  progmem_image_sprite_t background;
-  progmem_image_sprite_t peak_indicator;
-  needle_sprite_t needle_a;
-  needle_sprite_t needle_b;
-  ssd1306_t device_a;
-  ssd1306_t device_b;
-  display_t display_a;
-  display_t display_b;
-
   lcd_init();
   i2c_init();
   sei();
-  status("started");
 
   progmem_image_sprite_init(&background, BACKGROUND, 0, 0);
   progmem_image_sprite_init(&peak_indicator, PEAK_INDICATOR, 107, 7);
@@ -69,7 +60,6 @@ int main(void)
   ssd1306_init(&device_b, DISPLAY_B_ADDRESS);
   display_init(&display_a, &device_a);
   display_init(&display_b, &device_b);
-  status("disp. init.");
 
   display_add_sprite(&display_a, &background.sprite);
   display_add_sprite(&display_a, &peak_indicator.sprite);
@@ -80,17 +70,10 @@ int main(void)
   display_add_sprite(&display_b, &needle_b.sprite);
 
   needle_sprite_draw(&needle_a, 64);
-
-  status("needle drawn");
-
   display_update_async(&display_a);
-  status("disp. a updt.");
-
   display_update_async(&display_b);
-  status("disp. b updt.");
 
   _delay_ms(100);
-  status("i2c ready");
   i2c_wait();
 
   uint8_t angle_a = 0;

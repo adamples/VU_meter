@@ -54,10 +54,6 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
   for (uint8_t column = start_column; column <= end_column; ++column) {
     uint8_t segment = segments[column - column_a];
 
-    //~ if (column == needle->start_column[page] || column == needle->end_column[page]) {
-      //~ segment = 0xff;
-    //~ }
-
     for (uint8_t i = 0; i < 8; ++i) {
       uint8_t row = page * 8 + i;
 

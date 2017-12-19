@@ -1,5 +1,6 @@
 #include "display.h"
 #include <stdlib.h>
+#include <string.h>
 #include <avr/pgmspace.h>
 #include "utils.h"
 #include "assert.h"
@@ -158,18 +159,86 @@ update_extents_add_region(update_extents_t *extents, uint8_t page, uint8_t start
 }
 
 
-int
-cmp_regions_by_page(const void *a, const void *b)
+static int
+cmp_regions_by_page_and_column(const void *a, const void *b)
 {
   region_t *region_a = (region_t *) a;
   region_t *region_b = (region_t *) b;
 
-  return (region_a->page > region_b->page) - (region_a->page < region_b->page);
+  if (region_a->page > region_b->page) {
+    return 1;
+  }
+  else if (region_a->page < region_b->page) {
+    return -1;
+  }
+  else {
+    return ((region_a->start_column > region_b->start_column) -
+      (region_a->start_column < region_b->start_column));
+  }
+}
+
+
+static bool
+can_merge_regions(const region_t *region_a, const region_t *region_b)
+{
+  /* If regions were not merged additional 8 bytes would need to be sent to
+   * reposition the cursor.
+   */
+  return (region_a->page == region_b->page)
+    && (region_b->start_column <= region_a->end_column + 1 + 8);
+}
+
+
+static void
+merge_regions(const region_t *source_a, const region_t *source_b, region_t *target)
+{
+  target->page = source_a->page;
+  target->start_column = source_a->start_column;
+  target->end_column = int_max(source_a->end_column, source_b->end_column);
+}
+
+
+static void
+copy_region(const region_t *source, region_t *target)
+{
+  memcpy(target, source, sizeof(region_t));
 }
 
 
 void
 update_extents_optimize(update_extents_t *extents)
 {
-  qsort(extents->regions, extents->regions_n, sizeof(region_t), cmp_regions_by_page);
+  qsort(extents->regions, extents->regions_n, sizeof(region_t),
+    cmp_regions_by_page_and_column);
+
+  region_t *regions = extents->regions;
+
+  uint8_t source_a_idx = 0;
+  uint8_t source_b_idx = 0;
+  uint8_t target_idx = 0;
+
+  for (source_a_idx = 0; source_a_idx < extents->regions_n; ++target_idx) {
+    region_t *source_a = &(regions[source_a_idx]);
+    region_t *target = &(regions[target_idx]);
+
+    for (source_b_idx = source_a_idx + 1; source_b_idx < extents->regions_n; ++source_b_idx)
+    {
+      region_t *source_b = &(regions[source_b_idx]);
+
+      if (can_merge_regions(source_a, source_b)) {
+        merge_regions(source_a, source_b, target);
+      }
+      else {
+        break;
+      }
+    }
+
+    if ((source_b_idx == source_a_idx + 1) && (target_idx != source_a_idx)) {
+      copy_region(source_a, target);
+    }
+
+    source_a_idx = source_b_idx;
+  }
+
+  extents->regions_n = target_idx;
 }
