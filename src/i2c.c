@@ -2,7 +2,7 @@
 #include "config.h"
 
 #if I2C_DRIVER == I2C_DRIVER_SYNC
-#include "i2c_sync.c.inc"
+#include "i2c_sync.c"
 #elif I2C_DRIVER == I2C_DRIVER_ASYNC
-#include "i2c_async.c.inc"
+#include "i2c_async.c"
 #endif
