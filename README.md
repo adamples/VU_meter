@@ -9,4 +9,4 @@ employed as displays.
 
 Here's a video showing test of rendering needle against background:
 
-[![Background and needle animation test video](https://img.youtube.com/vi/HKTR07n0YTo/maxresdefault.jpg)](https://www.youtube.com/watch?v=HKTR07n0YTo)
+[![Background and needle animation test video](https://img.youtube.com/vi/HKTR07n0YTo/maxresdefault.jpg)](https://youtu.be/nnctaA94B9k)
