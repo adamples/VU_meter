@@ -9,7 +9,7 @@ employed as displays.
 
 Here's a video showing test of VU meter prototype:
 
-[![Background and needle animation test video](https://img.youtube.com/vi/HKTR07n0YTo/maxresdefault.jpg)](https://youtu.be/nnctaA94B9k)
+[![Background and needle animation test video](https://img.youtube.com/vi/HKTR07n0YTo/maxresdefault.jpg)](https://youtu.be/e8a-bNMEwk4)
 
 ## Design
 
