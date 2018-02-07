@@ -54,11 +54,15 @@ typedef struct i2c_queue_t_ {
   uint8_t tasks_n;
 
   uint8_t front_buffer_cursor;
-  i2c_command_t current_command;
 } i2c_queue_t;
 
 
 static i2c_queue_t I2C_QUEUE;
+
+register i2c_command_code_t I2C_CURRENT_COMMAND_CODE __asm__("r2");
+register uint8_t I2C_CURRENT_COMMAND_DATA __asm__("r3");
+//~ static i2c_command_code_t I2C_CURRENT_COMMAND_CODE = I2C_COMMAND_PENDING;
+//~ static uint8_t I2C_CURRENT_COMMAND_DATA;
 
 
 #define assert_interrupts_disabled() assert((SREG & _BV(SREG_I)) == 0)
@@ -81,7 +85,8 @@ i2c_queue_switch_buffers()
   I2C_QUEUE.back_buffer->length = 0;
   I2C_QUEUE.front_buffer_cursor = 0;
 
-  I2C_QUEUE.current_command = I2C_QUEUE.front_buffer->commands[0];
+  I2C_CURRENT_COMMAND_CODE = I2C_QUEUE.front_buffer->commands[0].code;
+  I2C_CURRENT_COMMAND_DATA = I2C_QUEUE.front_buffer->commands[0].data;
 }
 
 
@@ -96,10 +101,10 @@ i2c_queue_switch_tasks(void)
 }
 
 
-static inline void i2c_queue_start_transmitter(void)
+static void i2c_queue_start_transmitter(void)
 {
   assert(!(I2C_QUEUE.transmitter_active));
-  assert(I2C_QUEUE.current_command.code != I2C_COMMAND_PENDING);
+  assert(I2C_CURRENT_COMMAND_CODE != I2C_COMMAND_PENDING);
 
   I2C_QUEUE.transmitter_active = true;
   i2c_queue_process_command();
@@ -149,8 +154,17 @@ i2c_queue_fetch_commands(void)
 }
 
 
+static inline void
+i2c_queue_process_command_stage_1(void)
+{
+  if (I2C_CURRENT_COMMAND_CODE == I2C_COMMAND_SEND_DATA) {
+      i2c_hw_send_byte_int(I2C_CURRENT_COMMAND_DATA);
+  }
+}
+
+
 static void
-i2c_queue_process_command(void)
+i2c_queue_process_command_stage_2(void)
 {
   assert_interrupts_disabled();
   assert(I2C_QUEUE.transmitter_active);
@@ -158,10 +172,10 @@ i2c_queue_process_command(void)
   assert(I2C_QUEUE.front_buffer->length > 0);
   assert(I2C_QUEUE.front_buffer_cursor <= I2C_QUEUE.front_buffer->length);
 
-  switch (I2C_QUEUE.current_command.code) {
+  switch (I2C_CURRENT_COMMAND_CODE) {
 
     case I2C_COMMAND_SEND_DATA:
-      i2c_hw_send_byte_int(I2C_QUEUE.current_command.data);
+      /* Do nothing, data was sent in stage_1 */
       break;
 
     case I2C_COMMAND_START:
@@ -193,7 +207,7 @@ i2c_queue_process_command(void)
       return;
 
     default:
-      fault(FAULT_I2C, I2C_QUEUE.current_command.code, "Invalid command");
+      fault(FAULT_I2C, I2C_CURRENT_COMMAND_CODE, "Invalid command");
       break;
   }
 
@@ -214,24 +228,43 @@ i2c_queue_process_command(void)
       }
     }
     else {
-      I2C_QUEUE.current_command.code = I2C_COMMAND_PENDING;
+      I2C_CURRENT_COMMAND_CODE = I2C_COMMAND_PENDING;
     }
   }
   else {
-    I2C_QUEUE.current_command = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor];
+    I2C_CURRENT_COMMAND_CODE = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor].code;
+    I2C_CURRENT_COMMAND_DATA = I2C_QUEUE.front_buffer->commands[I2C_QUEUE.front_buffer_cursor].data;
     assert(I2C_QUEUE.transmitter_active);
   }
 }
 
 
+static inline void
+i2c_queue_process_command(void)
+{
+  i2c_queue_process_command_stage_1();
+  i2c_queue_process_command_stage_2();
+}
+
+
 ISR(TWI_vect) {
-  uint8_t i2c_status = TWSR & TW_STATUS_MASK;
+  //~ uint8_t i2c_status = TWSR & TW_STATUS_MASK;
 
-  if (i2c_status > TW_MT_DATA_ACK || i2c_status == TW_MT_SLA_NACK) {
-    fault(FAULT_I2C, i2c_status, "Error status");
-  }
+  //~ if (i2c_status > TW_MT_DATA_ACK || i2c_status == TW_MT_SLA_NACK) {
+    //~ fault(FAULT_I2C, i2c_status, "Error status");
+  //~ }
 
-  i2c_queue_process_command();
+  i2c_queue_process_command_stage_1();
+
+  /* Request interrupt INT0 */
+  PORTD |= _BV(PD2);
+  PORTD &= ~_BV(PD2);
+}
+
+
+ISR(INT0_vect)
+{
+  i2c_queue_process_command_stage_2();
 }
 
 /* User API ----------------------------------------------------------------- */
@@ -249,7 +282,7 @@ void i2c_init(void)
   I2C_QUEUE.transmitter_active = false;
   I2C_QUEUE.tasks_n = 0;
 
-  I2C_QUEUE.current_command.code = I2C_COMMAND_PENDING;
+  I2C_CURRENT_COMMAND_CODE = I2C_COMMAND_PENDING;
 
   ring_buffer_init(
     &(I2C_QUEUE.tasks),
@@ -257,6 +290,12 @@ void i2c_init(void)
     sizeof(i2c_task_t), /* element_size */
     sizeof(I2C_QUEUE.tasks_storage) / sizeof(i2c_task_t) /* elements_max */
   );
+
+  /* Configure INT0 as software interrupt source */
+  DDRD |= _BV(PD2);
+  PORTD &= ~_BV(PD2);
+  EICRA = _BV(ISC00);
+  EIMSK = _BV(INT0);
 
   i2c_hw_init();
 }

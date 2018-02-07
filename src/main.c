@@ -67,21 +67,29 @@ int main(void)
 
   display_add_sprite(&display_b, &background.sprite);
   display_add_sprite(&display_b, &peak_indicator.sprite);
-  display_add_sprite(&display_b, &needle_b.sprite);
+  display_add_sprite(&display_b, &needle_a.sprite);
 
-  needle_sprite_draw(&needle_a, 64);
+  peak_indicator.sprite.visible = false;
+  needle_sprite_draw(&needle_a, 0);
+  needle_sprite_draw(&needle_b, 0);
   display_update_async(&display_a);
   display_update_async(&display_b);
 
-  _delay_ms(100);
   i2c_wait();
 
-  uint8_t angle_a = 0;
-  uint8_t angle_b = 0;
-
   while (1) {
-    angle_a = 255 - adc_get(2) / 4;
-    angle_b = 255 - adc_get(3) / 4;
+    uint16_t adc_a = adc_get(2);
+    int16_t angle_a = (int32_t) (498 - adc_a) * 128 / 164;
+    int16_t angle_b = 255 - adc_get(3) / 2;
+
+    if (angle_a < 0) angle_a = -angle_a;
+
+    lcd_goto(0, 0);
+    lcd_put_int(2426 - (int32_t) adc_a * 5000 / 1024);
+    lcd_puts("mV ");
+    lcd_goto(8, 0);
+    lcd_put_int(498 - adc_a);
+    lcd_puts("    ");
 
     i2c_wait();
 
@@ -90,7 +98,6 @@ int main(void)
 
     needle_sprite_draw(&needle_a, angle_a);
     needle_sprite_draw(&needle_b, angle_b);
-    peak_indicator.sprite.visible = (angle_a > 192);
 
     needle_sprite_add_to_extents(&needle_a, &UPDATE_EXTENTS);
     update_extents_optimize(&UPDATE_EXTENTS);
@@ -100,19 +107,20 @@ int main(void)
     display_update_partial_async(&display_a, &UPDATE_EXTENTS);
     display_update_partial_async(&display_b, &UPDATE_EXTENTS);
 
-    //~ uint16_t i = 0;
-    //~ i2c_wait();
-    //~ BENCHMARK(display_update, {
-      //~ display_update_partial_async(&display_a, &UPDATE_EXTENTS);
+    uint16_t i = 0;
+    i2c_wait();
+    BENCHMARK(display_update, {
+      display_update_async(&display_a);
+      // display_update_partial_async(&display_a, &UPDATE_EXTENTS);
 
-      //~ while (!i2c_is_idle()) {
-        //~ _delay_us(100);
-        //~ ++i;
-      //~ }
-    //~ });
-    //~ lcd_putc(' ');
-    //~ lcd_put_int(i);
-    //~ lcd_puts("  us");
-    //~ _delay_ms(100);
+      while (!i2c_is_idle()) {
+        _delay_us(100);
+        ++i;
+      }
+    });
+    lcd_putc(' ');
+    lcd_put_int(i);
+    lcd_puts("00us");
+    _delay_ms(500);
   }
 }
