@@ -39,7 +39,7 @@ OBJDUMP=avr-objdump
 SIZE=avr-size
 RM=rm -f --
 PYTHON=python3
-IMAGE2C=$(PYTHON) image2c.py
+IMAGE2C=$(PYTHON) $(SRC_DIR)/image2c.py
 
 
 CFLAGS+=-mmcu=$(MCU)
@@ -113,8 +113,9 @@ clean:
 	$(RM) map.map
 	$(RM) $(TARGET).hex
 	$(RM) $(TARGET).eep
-	$(RM) background.c
-	$(RM) peak_indicator.c
+	$(RM) $(SRC_DIR)/background.c
+	$(RM) $(SRC_DIR)/peak_indicator.c
+	$(RM) $(SRC_DIR)/needle_coordinates.c
 
 .PHONY: all summary install clean
 -include $(C_OBJS:.o=.d)
