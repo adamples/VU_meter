@@ -4,25 +4,29 @@ PROG=usbasp
 
 
 TARGET=main
+SRC_DIR=src
+BUILD_DIR?=build
+
 
 C_SRC= \
-$(TARGET).c \
-lcd.c \
-fault.c \
-benchmark.c \
-ring_buffer.c \
-i2c.c \
-background.c \
-peak_indicator.c \
-ssd1306.c \
-display.c \
-progmem_image_sprite.c \
-needle_coordinates.c \
-needle_sprite.c \
-adc.c
+$(SRC_DIR)/background.c \
+$(SRC_DIR)/peak_indicator.c \
+$(SRC_DIR)/lcd.c \
+$(SRC_DIR)/fault.c \
+$(SRC_DIR)/benchmark.c \
+$(SRC_DIR)/ring_buffer.c \
+$(SRC_DIR)/i2c.c \
+$(SRC_DIR)/ssd1306.c \
+$(SRC_DIR)/display.c \
+$(SRC_DIR)/progmem_image_sprite.c \
+$(SRC_DIR)/needle_coordinates.c \
+$(SRC_DIR)/needle_sprite.c \
+$(SRC_DIR)/adc.c \
+$(SRC_DIR)/$(TARGET).c
 
-C_OBJS=$(C_SRC:.c=.o)
+C_OBJS=$(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
 OBJS=$(C_OBJS)
+
 
 
 CC=avr-gcc
@@ -52,16 +56,14 @@ CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
 CFLAGS+=-frename-registers
 CFLAGS+=-g
-CFLAGS+=-Wa,-ahlmsd=$(<:.c=.lst)
+CFLAGS+=-Wa,-ahlmsd=$(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.lst,$<)
 
 
 LDFLAGS+=-mmcu=$(MCU)
 LDFLAGS+=-static
-LDFLAGS+=-Wl,-Map=map.map,--cref
+LDFLAGS+=-Wl,-Map=$(BUILD_DIR)/map.map,--cref
 LDFLAGS+=-Wl,-gc-sections
-# Minimalna wersja printf
 #LDFLAGS += -Wl,-u,vfprintf -lprintf_min
-# Zmiennoprzecinkowa wersja printf (wymaga biblioteki matematycznej)
 #LDFLAGS += -Wl,-u,vfprintf -lprintf_flt
 #LDFLAGS+=-g
 LDLIBS+=-lm
@@ -73,34 +75,33 @@ ASFLAGS+=-x assembler-with-cpp
 ASFLAGS+=-Wa,-ahlms=$(<:.s=.lst),-g,--gstabs
 
 
-all: $(TARGET).hex
+all: $(BUILD_DIR)/$(TARGET).hex
 
-background.c: images/background.png
+$(SRC_DIR)/background.c: $(SRC_DIR)/images/background.png
 	$(IMAGE2C) $< $@ BACKGROUND
 
-peak_indicator.c: images/peak_indicator.png
+$(SRC_DIR)/peak_indicator.c: $(SRC_DIR)/images/peak_indicator.png
 	$(IMAGE2C) $< $@ PEAK_INDICATOR
 
-needle_coordinates.c: config.h Makefile calculate_needle_coordinates.py
-	$(PYTHON) calculate_needle_coordinates.py 128 > $@
+$(SRC_DIR)/needle_coordinates.c: $(SRC_DIR)/config.h Makefile $(SRC_DIR)/calculate_needle_coordinates.py
+	$(PYTHON) $(SRC_DIR)/calculate_needle_coordinates.py 128 > $@
 
-$(TARGET): $(OBJS)
+$(BUILD_DIR)/$(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(TARGET_ARCH) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-%.hex: %
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
-%.o: %.c Makefile
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c $< -o $@
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c -o $@ $<
 
-
-summary: $(TARGET)
+summary: $(BUILD_DIR)/$(TARGET)
 	nm --print-size --size-sort --radix=d main
-	$(SIZE) $(TARGET)
+	$(SIZE) $(BUILD_DIR)/$(TARGET)
 
 
-install: $(TARGET)
-	avrdude -p $(MCU) -c $(PROG) -U flash:w:$(TARGET) #-U eeprom:w:$(TARGET).eep
+install: $(BUILD_DIR)/$(TARGET)
+	avrdude -p $(MCU) -c $(PROG) -U flash:w:$(BUILD_DIR)/$(TARGET).hex #-U eeprom:w:$(BUILD_DIR)/$(TARGET).eep
 
 
 clean:
@@ -116,4 +117,4 @@ clean:
 	$(RM) peak_indicator.c
 
 .PHONY: all summary install clean
--include $(C_SRC:.c=.d)
+-include $(C_OBJS:.o=.d)
