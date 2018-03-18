@@ -1,11 +1,13 @@
 #ifndef BENCHMARK_H
 #define BENCHMARK_H
 
+#include <stdint.h>
 
-typedef float time_t;
+typedef int32_t time_t;
 
 
 time_t benchmark_start(void);
+time_t get_current_time(void);
 void benchmark_end(char *name, time_t start_time);
 
 

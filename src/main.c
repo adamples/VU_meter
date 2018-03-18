@@ -17,31 +17,58 @@
 #include "adc.h"
 
 
-region_t REGIONS[18] = { 0 };
+typedef struct vu_meter_t_ {
+  ssd1306_t device;
+  display_t display;
+  needle_sprite_t needle;
+  region_t update_regions[18];
+  update_extents_t update_extents;
+} vu_meter_t;
 
-update_extents_t UPDATE_EXTENTS = {
-  .regions_n = 0,
-  .regions = REGIONS
-};
 
-
-progmem_image_sprite_t background;
-progmem_image_sprite_t peak_indicator;
-needle_sprite_t needle_a;
-needle_sprite_t needle_b;
-ssd1306_t device_a;
-ssd1306_t device_b;
-display_t display_a;
-display_t display_b;
+progmem_image_sprite_t BACKGROUND_SPRITE;
+progmem_image_sprite_t PEAK_INDICATOR_SPRITE;
+vu_meter_t VU_METER_L;
+vu_meter_t VU_METER_R;
 
 
 void
-status(char *str)
+vu_meter_init(vu_meter_t *meter, int8_t address)
 {
-  lcd_clear();
-  lcd_puts("Status:");
-  lcd_goto(0, 1);
-  lcd_puts(str);
+  meter->update_extents.regions = meter->update_regions;
+
+  ssd1306_init(&(meter->device), address);
+  display_init(&(meter->display), &(meter->device));
+
+  display_add_sprite(&(meter->display), &(BACKGROUND_SPRITE.sprite));
+  display_add_sprite(&(meter->display), &(PEAK_INDICATOR_SPRITE.sprite));
+
+  needle_sprite_init(&(meter->needle));
+  needle_sprite_draw(&(meter->needle), 0);
+  display_add_sprite(&(meter->display), &(meter->needle).sprite);
+
+  display_update_async(&(meter->display));
+}
+
+
+void
+vu_meter_update(vu_meter_t *meter, uint8_t angle)
+{
+  update_extents_reset(&(meter->update_extents));
+  needle_sprite_add_to_extents(&(meter->needle), &(meter->update_extents));
+
+  needle_sprite_draw(&(meter->needle), angle);
+  needle_sprite_add_to_extents(&(meter->needle), &(meter->update_extents));
+  update_extents_optimize(&(meter->update_extents));
+
+  display_update_partial_async(&(meter->display), &(meter->update_extents));
+}
+
+
+static uint8_t
+percent_to_angle(int percent)
+{
+  return percent * 181 / 100;
 }
 
 
@@ -51,68 +78,30 @@ int main(void)
   i2c_init();
   sei();
 
-  progmem_image_sprite_init(&background, BACKGROUND, 0, 0);
-  progmem_image_sprite_init(&peak_indicator, PEAK_INDICATOR, 107, 7);
-  needle_sprite_init(&needle_a);
-  needle_sprite_init(&needle_b);
+  progmem_image_sprite_init(&BACKGROUND_SPRITE, BACKGROUND, 0, 0);
+  progmem_image_sprite_init(&PEAK_INDICATOR_SPRITE, PEAK_INDICATOR, 107, 7);
 
-  ssd1306_init(&device_a, DISPLAY_A_ADDRESS);
-  ssd1306_init(&device_b, DISPLAY_B_ADDRESS);
-  display_init(&display_a, &device_a);
-  display_init(&display_b, &device_b);
-
-  display_add_sprite(&display_a, &background.sprite);
-  display_add_sprite(&display_a, &peak_indicator.sprite);
-  display_add_sprite(&display_a, &needle_a.sprite);
-
-  display_add_sprite(&display_b, &background.sprite);
-  display_add_sprite(&display_b, &peak_indicator.sprite);
-  display_add_sprite(&display_b, &needle_b.sprite);
-
-  needle_sprite_draw(&needle_a, 64);
-  display_update_async(&display_a);
-  display_update_async(&display_b);
-
-  _delay_ms(100);
+  vu_meter_init(&VU_METER_L, DISPLAY_A_ADDRESS);
+  vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS);
   i2c_wait();
 
-  uint8_t angle_a = 0;
-  uint8_t angle_b = 0;
+  benchmark_start();
 
   while (1) {
-    angle_a = 255 - adc_get(2) / 4;
-    angle_b = 255 - adc_get(3) / 4;
+    uint16_t adc_l = adc_get(2);
+    int16_t angle_l = (int32_t) (498 - adc_l) * 128 / 164;
+    if (angle_l < 0) angle_l = -angle_l;
+    if (angle_l > 255) angle_l = 255;
 
     i2c_wait();
+    time_t frame_start = get_current_time();
+    vu_meter_update(&VU_METER_L, angle_l);
+    i2c_wait();
+    time_t frame_time = get_current_time() - frame_start;
+    int16_t fps = (int32_t) 1000000 / frame_time;
 
-    update_extents_reset(&UPDATE_EXTENTS);
-    needle_sprite_add_to_extents(&needle_a, &UPDATE_EXTENTS);
+    PEAK_INDICATOR_SPRITE.sprite.visible = (angle_l > 192);
 
-    needle_sprite_draw(&needle_a, angle_a);
-    needle_sprite_draw(&needle_b, angle_b);
-    peak_indicator.sprite.visible = (angle_a > 192);
-
-    needle_sprite_add_to_extents(&needle_a, &UPDATE_EXTENTS);
-    update_extents_optimize(&UPDATE_EXTENTS);
-
-    //~ display_update_async(&display_a);
-    //~ display_update_async(&display_b);
-    display_update_partial_async(&display_a, &UPDATE_EXTENTS);
-    display_update_partial_async(&display_b, &UPDATE_EXTENTS);
-
-    //~ uint16_t i = 0;
-    //~ i2c_wait();
-    //~ BENCHMARK(display_update, {
-      //~ display_update_partial_async(&display_a, &UPDATE_EXTENTS);
-
-      //~ while (!i2c_is_idle()) {
-        //~ _delay_us(100);
-        //~ ++i;
-      //~ }
-    //~ });
-    //~ lcd_putc(' ');
-    //~ lcd_put_int(i);
-    //~ lcd_puts("  us");
-    //~ _delay_ms(100);
+    vu_meter_update(&VU_METER_R, percent_to_angle(fps / 2));
   }
 }

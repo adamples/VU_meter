@@ -64,7 +64,7 @@ needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_
       uint8_t bit = 1 << i;
       int8_t d = needle->column[row] - column;
 
-      if (d < 0) d = -d;// - 1;
+      if (d < 0) d = -d; /* Add `- 1` for double width */
 
       if (d == 0) {
         segment |= bit;

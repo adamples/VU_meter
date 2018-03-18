@@ -50,7 +50,7 @@ CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror
 CFLAGS+=-std=c99
-#~ CFLAGS+=-DNDEBUG
+#CFLAGS+=-DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
@@ -89,7 +89,7 @@ $(SRC_DIR)/needle_coordinates.c: $(SRC_DIR)/config.h Makefile $(SRC_DIR)/calcula
 $(BUILD_DIR)/$(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(TARGET_ARCH) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%
+$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET)
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
@@ -100,7 +100,7 @@ summary: $(BUILD_DIR)/$(TARGET)
 	$(SIZE) $(BUILD_DIR)/$(TARGET)
 
 
-install: $(BUILD_DIR)/$(TARGET)
+install: $(BUILD_DIR)/$(TARGET).hex
 	avrdude -p $(MCU) -c $(PROG) -U flash:w:$(BUILD_DIR)/$(TARGET).hex #-U eeprom:w:$(BUILD_DIR)/$(TARGET).eep
 
 

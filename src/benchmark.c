@@ -5,7 +5,7 @@
 #include "lcd.h"
 
 
-#define SECONDS_PER_TICK (0.00001)
+#define USECONDS_PER_TICK (10)
 
 static volatile uint16_t TCNT1_ADD = 0;
 static volatile bool initialized = false;
@@ -51,7 +51,7 @@ time_t get_current_time(void)
   time_t result = 0;
 
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = (time_t) (TCNT1_ADD * 0x10000L + TCNT1) * SECONDS_PER_TICK;
+    result = (time_t) (TCNT1_ADD * 0x10000L + TCNT1) * USECONDS_PER_TICK;
   }
 
   return result;
@@ -81,7 +81,7 @@ benchmark_end(char *name, time_t start_time)
   lcd_puts(name);
   lcd_puts(": ");
   lcd_goto(0, 1);
-  lcd_put_long(time * 1000000.0);
+  lcd_put_long(time);
   lcd_puts("us");
 }
 
