@@ -38,7 +38,7 @@ OBJCOPY=avr-objcopy
 OBJDUMP=avr-objdump
 SIZE=avr-size
 RM=rm -f --
-PYTHON=python3
+PYTHON?=python
 IMAGE2C=$(PYTHON) $(SRC_DIR)/image2c.py
 
 
@@ -77,11 +77,11 @@ ASFLAGS+=-Wa,-ahlms=$(<:.s=.lst),-g,--gstabs
 
 all: $(BUILD_DIR)/$(TARGET).hex
 
-$(SRC_DIR)/background.c: $(SRC_DIR)/images/background.png
-	$(IMAGE2C) $< $@ BACKGROUND
+$(SRC_DIR)/background.c: $(SRC_DIR)/images/background.bmp $(SRC_DIR)/image2c.py
+	$(IMAGE2C) $< $@ BACKGROUND inverted
 
-$(SRC_DIR)/peak_indicator.c: $(SRC_DIR)/images/peak_indicator.png
-	$(IMAGE2C) $< $@ PEAK_INDICATOR
+$(SRC_DIR)/peak_indicator.c: $(SRC_DIR)/images/peak_indicator.bmp $(SRC_DIR)/image2c.py
+	$(IMAGE2C) $< $@ PEAK_INDICATOR inverted
 
 $(SRC_DIR)/needle_coordinates.c: $(SRC_DIR)/config.h Makefile $(SRC_DIR)/calculate_needle_coordinates.py
 	$(PYTHON) $(SRC_DIR)/calculate_needle_coordinates.py 128 > $@
