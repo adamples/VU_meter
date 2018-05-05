@@ -65,11 +65,13 @@ vu_meter_update(vu_meter_t *meter, uint8_t angle)
 }
 
 
+/*
 static uint8_t
 percent_to_angle(int percent)
 {
   return percent * 181 / 100;
 }
+*/
 
 
 int main(void)
@@ -82,7 +84,7 @@ int main(void)
   progmem_image_sprite_init(&PEAK_INDICATOR_SPRITE, PEAK_INDICATOR, 107, 7);
 
   vu_meter_init(&VU_METER_L, DISPLAY_A_ADDRESS);
-  vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS);
+  // vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS);
   i2c_wait();
 
   benchmark_start();
@@ -94,14 +96,14 @@ int main(void)
     if (angle_l > 255) angle_l = 255;
 
     i2c_wait();
-    time_t frame_start = get_current_time();
+    // time_t frame_start = get_current_time();
     vu_meter_update(&VU_METER_L, angle_l);
     i2c_wait();
-    time_t frame_time = get_current_time() - frame_start;
-    int16_t fps = (int32_t) 1000000 / frame_time;
+    // time_t frame_time = get_current_time() - frame_start;
+    // int16_t fps = (int32_t) 1000000 / frame_time;
 
     PEAK_INDICATOR_SPRITE.sprite.visible = (angle_l > 192);
 
-    vu_meter_update(&VU_METER_R, percent_to_angle(fps / 2));
+    // vu_meter_update(&VU_METER_R, percent_to_angle(fps / 2));
   }
 }
