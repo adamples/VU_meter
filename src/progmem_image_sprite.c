@@ -44,3 +44,11 @@ progmem_image_sprite_init(progmem_image_sprite_t *image, const uint8_t *data, ui
   image->height = pgm_read_byte(data + 1) / SSD1306_PAGE_HEIGHT;
   image->data = data + 2;
 }
+
+
+void
+progmem_image_sprite_add_to_extents(progmem_image_sprite_t *image, update_extents_t *extents)
+{
+  for (uint8_t page = image->page; page < image->page + image->height; ++page)
+    update_extents_add_region(extents, page, image->column, image->column + image->width - 1);
+}
