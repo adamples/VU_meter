@@ -59,6 +59,7 @@ vu_meter_update(vu_meter_t *meter, uint8_t angle)
 
   needle_sprite_draw(&(meter->needle), angle);
   needle_sprite_add_to_extents(&(meter->needle), &(meter->update_extents));
+  progmem_image_sprite_add_to_extents(&PEAK_INDICATOR_SPRITE, &(meter->update_extents));
   update_extents_optimize(&(meter->update_extents));
 
   display_update_partial_async(&(meter->display), &(meter->update_extents));
