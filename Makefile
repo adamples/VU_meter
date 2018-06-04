@@ -16,7 +16,7 @@ $(SRC_DIR)/fault.c \
 $(SRC_DIR)/benchmark.c \
 $(SRC_DIR)/ring_buffer.c \
 $(SRC_DIR)/i2c.c \
-$(SRC_DIR)/ssd1306.c \
+$(SRC_DIR)/oled.c \
 $(SRC_DIR)/display.c \
 $(SRC_DIR)/progmem_image_sprite.c \
 $(SRC_DIR)/needle_coordinates.c \

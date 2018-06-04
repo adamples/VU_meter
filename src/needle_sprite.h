@@ -2,15 +2,15 @@
 #define NEEDLE_SPRITE_H
 
 #include <stdint.h>
-#include "ssd1306.h"
+#include "oled.h"
 #include "display.h"
 
 
 typedef struct needle_sprite_t_ {
   sprite_t sprite;
-  int8_t column[SSD1306_HEIGHT];
-  int8_t start_column[SSD1306_PAGES_N];
-  int8_t end_column[SSD1306_PAGES_N];
+  int8_t column[OLED_HEIGHT];
+  int8_t start_column[OLED_PAGES_N];
+  int8_t end_column[OLED_PAGES_N];
 } needle_sprite_t;
 
 

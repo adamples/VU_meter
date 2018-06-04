@@ -2,7 +2,7 @@
 #define PROGMEM_IMAGE_SPRITE_H
 
 #include <stdint.h>
-#include "ssd1306.h"
+#include "oled.h"
 #include "display.h"
 
 

@@ -9,7 +9,7 @@
 #include "i2c.h"
 #include "lcd.h"
 #include "images.h"
-#include "ssd1306.h"
+#include "oled.h"
 #include "display.h"
 #include "progmem_image_sprite.h"
 #include "needle_sprite.h"
@@ -18,7 +18,7 @@
 
 
 typedef struct vu_meter_t_ {
-  ssd1306_t device;
+  oled_t device;
   display_t display;
   needle_sprite_t needle;
   region_t update_regions[18];
@@ -37,7 +37,7 @@ vu_meter_init(vu_meter_t *meter, int8_t address)
 {
   meter->update_extents.regions = meter->update_regions;
 
-  ssd1306_init(&(meter->device), address);
+  oled_init(&(meter->device), address);
   display_init(&(meter->display), &(meter->device));
 
   display_add_sprite(&(meter->display), &(BACKGROUND_SPRITE.sprite));

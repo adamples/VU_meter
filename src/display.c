@@ -7,7 +7,7 @@
 
 
 void
-display_init(display_t *display, ssd1306_t *device)
+display_init(display_t *display, oled_t *device)
 {
   display->device = device;
   display->sprites_n = 0;
@@ -28,7 +28,7 @@ display_add_sprite(display_t *display, sprite_t *sprite)
 bool
 display_update_async_cb(display_t *display)
 {
-  ssd1306_segment_t segments[SEGMENTS_N];
+  oled_segment_t segments[SEGMENTS_N];
 
   for (uint8_t i = 0; i < display->sprites_n; ++i) {
     if (display->sprites[i]->visible) {
@@ -42,7 +42,7 @@ display_update_async_cb(display_t *display)
     }
   }
 
-  ssd1306_put_segments(
+  oled_put_segments(
     display->device,
     display->update.full.column,
     display->update.full.page,
@@ -52,12 +52,12 @@ display_update_async_cb(display_t *display)
 
   display->update.full.column += SEGMENTS_N;
 
-  if (display->update.full.column >= SSD1306_COLUMNS_N) {
+  if (display->update.full.column >= OLED_COLUMNS_N) {
     display->update.full.column = 0;
     ++display->update.full.page;
 
-    if (display->update.full.page >= SSD1306_PAGES_N) {
-      ssd1306_finish_update(display->device);
+    if (display->update.full.page >= OLED_PAGES_N) {
+      oled_finish_update(display->device);
       return false;
     }
   }
@@ -72,9 +72,9 @@ display_update_async(display_t *display)
   display->update.full.column = 0;
   display->update.full.page = 0;
 
-  ssd1306_start_update(
+  oled_start_update(
     display->device,
-    (ssd1306_update_callback_t) display_update_async_cb,
+    (oled_update_callback_t) display_update_async_cb,
     display
   );
 }
@@ -83,7 +83,7 @@ display_update_async(display_t *display)
 bool
 display_update_partial_async_cb(display_t *display)
 {
-  ssd1306_segment_t segments[SEGMENTS_N];
+  oled_segment_t segments[SEGMENTS_N];
   partial_update_ctrl_t *update = &(display->update.partial);
   region_t *region = &(update->extents->regions[update->region_index]);
 
@@ -101,7 +101,7 @@ display_update_partial_async_cb(display_t *display)
     }
   }
 
-  ssd1306_put_segments(
+  oled_put_segments(
     display->device,
     update->column,
     region->page,
@@ -113,7 +113,7 @@ display_update_partial_async_cb(display_t *display)
     ++(update->region_index);
 
     if (update->region_index == update->extents->regions_n) {
-      ssd1306_finish_update(display->device);
+      oled_finish_update(display->device);
       return false;
     }
 
@@ -134,9 +134,9 @@ display_update_partial_async(display_t *display, update_extents_t *extents)
   display->update.partial.column = extents->regions[0].start_column;
   display->update.partial.extents = extents;
 
-  ssd1306_start_update(
+  oled_start_update(
     display->device,
-    (ssd1306_update_callback_t) display_update_partial_async_cb,
+    (oled_update_callback_t) display_update_partial_async_cb,
     display
   );
 }

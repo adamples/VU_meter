@@ -3,14 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "ssd1306.h"
+#include "oled.h"
 
 #define DISPLAY_MAX_SPRITES (4)
 
 
 typedef struct sprite_t_ sprite_t;
 
-typedef void (*sprite_render_t)(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments);
+typedef void (*sprite_render_t)(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, oled_segment_t* segments);
 
 struct sprite_t_ {
   sprite_render_t render;
@@ -49,14 +49,14 @@ typedef union update_ctrl_t_ {
 
 
 typedef struct display_t_ {
-  ssd1306_t *device;
+  oled_t *device;
   sprite_t *sprites[DISPLAY_MAX_SPRITES];
   uint8_t sprites_n;
   update_ctrl_t update;
 } display_t;
 
 
-void display_init(display_t *display, ssd1306_t *device);
+void display_init(display_t *display, oled_t *device);
 void display_add_sprite(display_t *display, sprite_t *sprite);
 void display_update_async(display_t *display);
 void display_update_partial_async(display_t *display, update_extents_t *extents);

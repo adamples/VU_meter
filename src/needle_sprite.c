@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "assert.h"
 #include "needle_coordinates.h"
-#include "ssd1306.h"
+#include "oled.h"
 
 
 static void
@@ -21,7 +21,7 @@ draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_
     buffer[y] = -128;
   }
 
-  for (int8_t y = ay, x = ax; y <= by && y < SSD1306_HEIGHT; ++y) {
+  for (int8_t y = ay, x = ax; y <= by && y < OLED_HEIGHT; ++y) {
     buffer[y] = x;
     error += delta_err;
 
@@ -31,13 +31,13 @@ draw_line_23_octants(int8_t buffer[], uint8_t ax, uint8_t ay, uint8_t bx, uint8_
     }
   }
 
-  for (y = by + 1; y < SSD1306_HEIGHT; ++y) {
+  for (y = by + 1; y < OLED_HEIGHT; ++y) {
     buffer[y] = -128;
   }
 }
 
 static void
-needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, ssd1306_segment_t* segments)
+needle_sprite_render_cb(sprite_t *sprite, uint8_t column_a, uint8_t page, uint8_t column_b, oled_segment_t* segments)
 {
   needle_sprite_t *needle = (needle_sprite_t *) sprite;
 
@@ -100,7 +100,7 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
   uint8_t page = 0;
 
   /* Pages over the needle */
-  for (; page < ay / SSD1306_PAGE_HEIGHT; ++page) {
+  for (; page < ay / OLED_PAGE_HEIGHT; ++page) {
     needle->start_column[page] = -128;
     needle->end_column[page] = -128;
   }
@@ -108,25 +108,25 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
   /* Page, where the needle has it's tip */
   if (ax <= NEEDLE_AXIS_X) {
     needle->start_column[page] = ax;
-    needle->end_column[page] = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+    needle->end_column[page] = needle->column[(page + 1) * OLED_PAGE_HEIGHT - 1];
   }
   else {
-    needle->start_column[page] = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+    needle->start_column[page] = needle->column[(page + 1) * OLED_PAGE_HEIGHT - 1];
     needle->end_column[page] = ax;
   }
 
   ++page;
 
   /* Pages below the needle tip */
-  for (; page < SSD1306_PAGES_N; ++page) {
-    int8_t top_x = needle->column[page * SSD1306_PAGE_HEIGHT];
-    int8_t bottom_x = needle->column[(page + 1) * SSD1306_PAGE_HEIGHT - 1];
+  for (; page < OLED_PAGES_N; ++page) {
+    int8_t top_x = needle->column[page * OLED_PAGE_HEIGHT];
+    int8_t bottom_x = needle->column[(page + 1) * OLED_PAGE_HEIGHT - 1];
     needle->start_column[page] = int_min(top_x, bottom_x);
     needle->end_column[page] = int_max(top_x, bottom_x);
   }
 
   /* Take account of needle shadow width */
-  for (page = 0; page < SSD1306_PAGES_N; ++page) {
+  for (page = 0; page < OLED_PAGES_N; ++page) {
     if (needle->start_column[page] == -128) {
       continue;
     }
@@ -138,8 +138,8 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
       needle->start_column[page] -= 3;
     }
 
-    if (needle->end_column[page] >= SSD1306_WIDTH - 3) {
-      needle->end_column[page] = SSD1306_WIDTH - 1;
+    if (needle->end_column[page] >= OLED_WIDTH - 3) {
+      needle->end_column[page] = OLED_WIDTH - 1;
     }
     else {
       needle->end_column[page] += 3;
@@ -147,7 +147,7 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
   }
 
 #ifndef NDEBUG
-  for (page = 0; page < SSD1306_PAGES_N; ++page) {
+  for (page = 0; page < OLED_PAGES_N; ++page) {
     assert(needle->start_column[page] <= needle->end_column[page]);
   }
 #endif
@@ -157,7 +157,7 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
 void
 needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t *extents)
 {
-  for (uint8_t page = 0; page < SSD1306_PAGES_N; ++page) {
+  for (uint8_t page = 0; page < OLED_PAGES_N; ++page) {
     if (needle->start_column[page] == -128) {
       continue;
     }
