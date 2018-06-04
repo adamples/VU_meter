@@ -105,14 +105,14 @@ install: $(BUILD_DIR)/$(TARGET).hex
 
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(BUILD_DIR)/$(TARGET)
 	$(RM) $(OBJS)
 	$(RM) $(OBJS:.o=.map)
 	$(RM) $(OBJS:.o=.d)
 	$(RM) $(OBJS:.o=.lst)
-	$(RM) map.map
-	$(RM) $(TARGET).hex
-	$(RM) $(TARGET).eep
+	$(RM) $(BUILD_DIR)/map.map
+	$(RM) $(BUILD_DIR)/$(TARGET).hex
+	$(RM) $(BUILD_DIR)/$(TARGET).eep
 	$(RM) $(SRC_DIR)/background.c
 	$(RM) $(SRC_DIR)/peak_indicator.c
 	$(RM) $(SRC_DIR)/needle_coordinates.c
