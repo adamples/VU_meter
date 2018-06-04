@@ -1,6 +1,7 @@
 # Intermediate files
 src/background.c
 src/peak_indicator.c
+src/needle_coordinates.c
 
 # Build directory
 build/*.o
@@ -8,6 +9,7 @@ build/*.d
 build/*.lst
 build/*.map
 build/*.hex
+build/*.eep
 build/main
 
 *.geany
