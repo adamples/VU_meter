@@ -2,57 +2,47 @@
 #include <string.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
-#include "lcd.h"
+#include <avr/eeprom.h>
+#include <avr/wdt.h>
 
+#ifndef NDEBUG
+#include <util/delay.h>
+
+static fault_code_t FAULT_CODE EEMEM;
+static uint16_t FAULT_EXTENDED_STATUS EEMEM;
+static char FAULT_ERROR_TEXT[32] EEMEM;
 
 void
-lcd_fault(fault_code_t code, uint16_t extended_status, const char *error_text)
+debug_fault(fault_code_t code, uint16_t extended_status, const char *error_text)
 {
   cli();
 
-  lcd_init();
-  lcd_puts("F: ");
+  eeprom_update_byte(&FAULT_CODE, code);
+  eeprom_update_word(&FAULT_EXTENDED_STATUS, extended_status);
 
-  switch (code) {
-    case FAULT_I2C: lcd_puts("I2C"); break;
-    case FAULT_ASSERTION_FAILED: lcd_puts("ASSERT"); break;
+  if (error_text != NULL) {
+    eeprom_update_block(error_text, FAULT_ERROR_TEXT, strlen(error_text));
   }
 
-  lcd_putc('/');
-  lcd_put_int(extended_status);
+  eeprom_busy_wait();
 
-  int text_len = strlen(error_text);
-
-  TWCR = 0;
-  DDRD = 0xff;
-  PORTD = 0x00;
-
-  if (error_text == NULL) {
-    lcd_goto(0, 1);
-    lcd_puts("No error text");
-
-    while (1) {
-      PORTD = ~PORTD;
-      _delay_ms(500);
-    }
-  }
+  DDRB |= _BV(PB5);
 
   while (1) {
-    lcd_goto(0, 1);
-    lcd_puts((char *) error_text);
-    PORTD = ~PORTD;
-    _delay_ms(2000);
-
-    for (int i = 1; i <= text_len - 16; ++i) {
-      lcd_goto(0, 1);
-      lcd_puts((char *) error_text + i);
-      lcd_putc(' ');
-      PORTD = ~PORTD;
-      _delay_ms(1000);
-    }
-
-    PORTD = ~PORTD;
-    _delay_ms(1000);
+    PORTB |= _BV(PB5);
+    _delay_ms(500);
+    PORTB &= ~_BV(PB5);
+    _delay_ms(500);
   }
+}
+
+#endif
+
+
+void
+release_fault(fault_code_t code, uint16_t extended_status, const char *error_text)
+{
+  cli();
+  wdt_enable(WDTO_15MS);
+  while (1);
 }

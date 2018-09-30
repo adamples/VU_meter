@@ -10,12 +10,12 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="2960"
+   width="2880"
    height="1200"
-   viewBox="0 0 783.16666 317.50001"
+   viewBox="0 0 762 317.50001"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92+devel unknown"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
    sodipodi:docname="scale.svg"
    inkscape:export-filename="/home/adam/Projekty/AVR/vu_meter/images/scale.png"
    inkscape:export-xdpi="48"
@@ -80,8 +80,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="0.32331081"
-     inkscape:cx="1480"
-     inkscape:cy="600"
+     inkscape:cx="1502.5585"
+     inkscape:cy="508.76667"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -93,7 +93,8 @@
      inkscape:window-y="27"
      inkscape:window-maximized="1"
      inkscape:snap-nodes="true"
-     inkscape:snap-grids="true">
+     inkscape:snap-grids="true"
+     scale-x="0.66458">
     <inkscape:grid
        type="xygrid"
        id="grid4267"
@@ -603,17 +604,6 @@
          x="639.68829"
          id="tspan5993"
          sodipodi:role="line">100</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:12.69999981px;line-height:0%;font-family:'Bitstream Vera Sans';-inkscape-font-specification:'Bitstream Vera Sans';letter-spacing:0px;word-spacing:0px;fill:none;stroke:#000000;stroke-width:4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       x="741.31995"
-       y="77.99884"
-       id="text5999"><tspan
-         sodipodi:role="line"
-         id="tspan5997"
-         x="741.31995"
-         y="77.99884"
-         style="fill:#000000;fill-opacity:1;stroke:#ffffff;stroke-width:4;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill">200</tspan></text>
     <text
        id="text6019"
        y="16.864109"

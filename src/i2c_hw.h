@@ -2,6 +2,7 @@
 #define I2C_HW_H
 
 #include <stdint.h>
+#include <avr/io.h>
 #include "config.h"
 
 

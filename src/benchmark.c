@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
-#include "lcd.h"
 
 
 #define USECONDS_PER_TICK (10)
@@ -75,14 +74,6 @@ time_t benchmark_start(void)
 void
 benchmark_end(char *name, time_t start_time)
 {
-  time_t time = get_current_time() - start_time;
-
-  lcd_clear();
-  lcd_puts(name);
-  lcd_puts(": ");
-  lcd_goto(0, 1);
-  lcd_put_long(time);
-  lcd_puts("us");
 }
 
 

@@ -1,6 +1,8 @@
 MCU=atmega328p
-F_CPU=20000000
-PROG=usbasp
+F_CPU=16000000
+PROG=arduino
+AVRDUDE_FLAGS=-P /dev/ttyACM0
+AVRDUDE_FLAGS+=-B1
 
 
 TARGET=main
@@ -11,10 +13,10 @@ BUILD_DIR?=build
 C_SRC= \
 $(SRC_DIR)/background.c \
 $(SRC_DIR)/peak_indicator.c \
-$(SRC_DIR)/lcd.c \
 $(SRC_DIR)/fault.c \
 $(SRC_DIR)/benchmark.c \
 $(SRC_DIR)/ring_buffer.c \
+$(SRC_DIR)/i2c_hw.c \
 $(SRC_DIR)/i2c.c \
 $(SRC_DIR)/oled.c \
 $(SRC_DIR)/display.c \
@@ -22,6 +24,7 @@ $(SRC_DIR)/progmem_image_sprite.c \
 $(SRC_DIR)/needle_coordinates.c \
 $(SRC_DIR)/needle_sprite.c \
 $(SRC_DIR)/adc.c \
+$(SRC_DIR)/calibration.c \
 $(SRC_DIR)/$(TARGET).c
 
 C_OBJS=$(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
@@ -50,7 +53,7 @@ CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror
 CFLAGS+=-std=c99
-#CFLAGS+=-DNDEBUG
+CFLAGS+=-DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
@@ -96,12 +99,19 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c -o $@ $<
 
 summary: $(BUILD_DIR)/$(TARGET)
-	nm --print-size --size-sort --radix=d main
+	nm --print-size --size-sort --radix=d $(BUILD_DIR)/main
 	$(SIZE) $(BUILD_DIR)/$(TARGET)
 
+dump_eeprom:
+	avrdude -p $(MCU) -c $(PROG) -U eeprom:r:eeprom.bin:r
+	xxd eeprom.bin
+	$(RM) eeprom.bin
 
 install: $(BUILD_DIR)/$(TARGET).hex
-	avrdude -p $(MCU) -c $(PROG) -U flash:w:$(BUILD_DIR)/$(TARGET).hex #-U eeprom:w:$(BUILD_DIR)/$(TARGET).eep
+	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U flash:w:$(BUILD_DIR)/$(TARGET).hex #-U eeprom:w:$(BUILD_DIR)/$(TARGET).eep
+
+install_fuse_bytes:
+	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U lfuse:w:0xe6:m
 
 
 clean:
@@ -117,5 +127,5 @@ clean:
 	$(RM) $(SRC_DIR)/peak_indicator.c
 	$(RM) $(SRC_DIR)/needle_coordinates.c
 
-.PHONY: all summary install clean
+.PHONY: all summary install_fuse_bytes install clean dump_eeprom
 -include $(C_OBJS:.o=.d)
