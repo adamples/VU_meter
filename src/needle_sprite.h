@@ -16,7 +16,7 @@ typedef struct needle_sprite_t_ {
 
 void needle_sprite_init(needle_sprite_t *needle);
 void needle_sprite_draw(needle_sprite_t *needle, uint8_t angle);
-void needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t *extents);
+void needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t extents);
 
 
 #endif /* NEEDLE_SPRITE_H */

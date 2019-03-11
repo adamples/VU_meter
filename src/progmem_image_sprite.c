@@ -37,7 +37,9 @@ void
 progmem_image_sprite_init(progmem_image_sprite_t *image, const uint8_t *data, uint8_t column, uint8_t page)
 {
   image->sprite.render = &progmem_image_sprite_render;
+  image->sprite.add_to_extents = (sprite_add_to_extents_t) &progmem_image_sprite_add_to_extents;
   image->sprite.visible = true;
+  image->sprite.changed = true;
   image->column = column;
   image->page = page;
   image->width = pgm_read_byte(data);
@@ -47,7 +49,7 @@ progmem_image_sprite_init(progmem_image_sprite_t *image, const uint8_t *data, ui
 
 
 void
-progmem_image_sprite_add_to_extents(progmem_image_sprite_t *image, update_extents_t *extents)
+progmem_image_sprite_add_to_extents(progmem_image_sprite_t *image, update_extents_t extents)
 {
   for (uint8_t page = image->page; page < image->page + image->height; ++page)
     update_extents_add_region(extents, page, image->column, image->column + image->width - 1);

@@ -28,6 +28,7 @@ adc_init(void)
   ADCSRA |= _BV(ADEN);
 }
 
+
 static uint16_t
 adc_sample(uint8_t channel)
 {
@@ -43,6 +44,7 @@ adc_sample(uint8_t channel)
 
   return 1023 - result;
 }
+
 
 void
 adc_get(adc_data_t *result)

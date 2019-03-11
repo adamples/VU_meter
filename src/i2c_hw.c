@@ -9,3 +9,4 @@ extern inline void i2c_hw_send_byte(uint8_t octet);
 extern inline void i2c_hw_send_byte_int(uint8_t octet);
 extern inline void i2c_hw_go_idle(void);
 extern inline void i2c_hw_disable_int(void);
+extern inline uint8_t i2c_hw_get_status(void);

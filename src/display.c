@@ -4,13 +4,15 @@
 #include <avr/pgmspace.h>
 #include "utils.h"
 #include "assert.h"
+#include "bitmap.h"
 
 
 void
-display_init(display_t *display, oled_t *device)
+display_init(display_t *display, uint8_t address)
 {
-  display->device = device;
   display->sprites_n = 0;
+  update_extents_reset(display->previous_extents, true);
+  while (!oled_init(&(display->device), address));
 }
 
 
@@ -23,222 +25,148 @@ display_add_sprite(display_t *display, sprite_t *sprite)
   ++display->sprites_n;
 }
 
-#define SEGMENTS_N (32)
 
-bool
-display_update_async_cb(display_t *display)
+static void
+display_update_get_extents(display_t *display)
 {
-  oled_segment_t segments[SEGMENTS_N];
+  update_extents_reset(display->current_extents, false);
 
   for (uint8_t i = 0; i < display->sprites_n; ++i) {
-    if (display->sprites[i]->visible) {
-      display->sprites[i]->render(
-        display->sprites[i],
-        display->update.full.column,
-        display->update.full.page,
-        display->update.full.column + SEGMENTS_N - 1,
-        segments
-      );
+    if (display->sprites[i]->changed) {
+      display->sprites[i]->add_to_extents(display->sprites[i], display->current_extents);
     }
   }
 
-  oled_put_segments(
-    display->device,
-    display->update.full.column,
-    display->update.full.page,
-    SEGMENTS_N,
-    segments
-  );
-
-  display->update.full.column += SEGMENTS_N;
-
-  if (display->update.full.column >= OLED_COLUMNS_N) {
-    display->update.full.column = 0;
-    ++display->update.full.page;
-
-    if (display->update.full.page >= OLED_PAGES_N) {
-      oled_finish_update(display->device);
-      return false;
-    }
+  for (uint8_t i = 0; i < EXTENTS_SIZE; ++i) {
+    display->previous_extents[i] |= display->current_extents[i];
   }
-
-  return true;
-}
-
-
-void
-display_update_async(display_t *display)
-{
-  display->update.full.column = 0;
-  display->update.full.page = 0;
-
-  oled_start_update(
-    display->device,
-    (oled_update_callback_t) display_update_async_cb,
-    display
-  );
-}
-
-
-bool
-display_update_partial_async_cb(display_t *display)
-{
-  oled_segment_t segments[SEGMENTS_N];
-  partial_update_ctrl_t *update = &(display->update.partial);
-  region_t *region = &(update->extents->regions[update->region_index]);
-
-  uint8_t column_b = int_min(update->column + SEGMENTS_N - 1, region->end_column);
-
-  for (uint8_t i = 0; i < display->sprites_n; ++i) {
-    if (display->sprites[i]->visible) {
-      display->sprites[i]->render(
-        display->sprites[i],
-        update->column,
-        region->page,
-        column_b,
-        segments
-      );
-    }
-  }
-
-  oled_put_segments(
-    display->device,
-    update->column,
-    region->page,
-    column_b - update->column + 1,
-    segments
-  );
-
-  if (column_b == region->end_column) {
-    ++(update->region_index);
-
-    if (update->region_index == update->extents->regions_n) {
-      oled_finish_update(display->device);
-      return false;
-    }
-
-    update->column = update->extents->regions[update->region_index].start_column;
-  }
-  else {
-    update->column = column_b + 1;
-  }
-
-  return true;
-}
-
-
-void
-display_update_partial_async(display_t *display, update_extents_t *extents)
-{
-  display->update.partial.region_index = 0;
-  display->update.partial.column = extents->regions[0].start_column;
-  display->update.partial.extents = extents;
-
-  oled_start_update(
-    display->device,
-    (oled_update_callback_t) display_update_partial_async_cb,
-    display
-  );
-}
-
-
-void
-update_extents_reset(update_extents_t *extents)
-{
-  extents->regions_n = 0;
-}
-
-
-void
-update_extents_add_region(update_extents_t *extents, uint8_t page, uint8_t start_column, uint8_t end_column)
-{
-  extents->regions[extents->regions_n].page = page;
-  extents->regions[extents->regions_n].start_column = start_column;
-  extents->regions[extents->regions_n].end_column = end_column;
-  ++(extents->regions_n);
-}
-
-
-static int
-cmp_regions_by_page_and_column(const void *a, const void *b)
-{
-  region_t *region_a = (region_t *) a;
-  region_t *region_b = (region_t *) b;
-
-  if (region_a->page > region_b->page) {
-    return 1;
-  }
-  else if (region_a->page < region_b->page) {
-    return -1;
-  }
-  else {
-    return ((region_a->start_column > region_b->start_column) -
-      (region_a->start_column < region_b->start_column));
-  }
-}
-
-
-static bool
-can_merge_regions(const region_t *region_a, const region_t *region_b)
-{
-  /* If regions were not merged additional 8 bytes would need to be sent to
-   * reposition the cursor.
-   */
-  return (region_a->page == region_b->page)
-    && (region_b->start_column <= region_a->end_column + 1 + 8);
 }
 
 
 static void
-merge_regions(const region_t *source_a, const region_t *source_b, region_t *target)
+display_update_render(display_t *display, oled_draw_cmd_t *draw,
+  uint8_t column, uint8_t page, uint8_t width)
 {
-  target->page = source_a->page;
-  target->start_column = source_a->start_column;
-  target->end_column = int_max(source_a->end_column, source_b->end_column);
-}
+  oled_draw_cmd_set_dimensions(draw, column, page, width);
+  oled_segment_t *segments = oled_draw_cmd_get_segments(draw);
 
+  #ifndef NDEBUG
+    for (uint8_t i = 0; i < width; ++i) {
+      segments[i] = 0x55 << (i & 1);
+    }
+  #endif
 
-static void
-copy_region(const region_t *source, region_t *target)
-{
-  memcpy(target, source, sizeof(region_t));
+  for (uint8_t i = 0; i < display->sprites_n; ++i) {
+    if (display->sprites[i]->visible) {
+      display->sprites[i]->render(display->sprites[i], column, page, column + width - 1, segments);
+    }
+  }
 }
 
 
 void
-update_extents_optimize(update_extents_t *extents)
+display_force_full_update(display_t *display)
 {
-  qsort(extents->regions, extents->regions_n, sizeof(region_t),
-    cmp_regions_by_page_and_column);
+  update_extents_reset(display->previous_extents, true);
+}
 
-  region_t *regions = extents->regions;
 
-  uint8_t source_a_idx = 0;
-  uint8_t source_b_idx = 0;
-  uint8_t target_idx = 0;
+void
+display_update(display_t *display)
+{
+  oled_draw_cmd_t buffer_a;
+  oled_draw_cmd_t buffer_b;
+  oled_draw_cmd_t *render_buffer = &buffer_a;
+  oled_draw_cmd_t *transmit_buffer = &buffer_b;
+  bool update_error = false;
 
-  for (source_a_idx = 0; source_a_idx < extents->regions_n; ++target_idx) {
-    region_t *source_a = &(regions[source_a_idx]);
-    region_t *target = &(regions[target_idx]);
+  oled_draw_cmd_init(&buffer_a);
+  oled_draw_cmd_init(&buffer_b);
 
-    for (source_b_idx = source_a_idx + 1; source_b_idx < extents->regions_n; ++source_b_idx)
+  display_update_get_extents(display);
+
+  uint8_t extents_word = 0;
+  uint8_t extents_bit = 1;
+
+  oled_draw_cmd_finish();
+
+  for (uint8_t page = 0; page < OLED_PAGES_N; ++page)
+  {
+    for (uint8_t column = 0; column < OLED_COLUMNS_N; column += EXTENTS_TILE_WIDTH)
     {
-      region_t *source_b = &(regions[source_b_idx]);
+      if (display->previous_extents[extents_word] & extents_bit)
+      {
+        display_update_render(display, render_buffer, column, page, EXTENTS_TILE_WIDTH);
 
-      if (can_merge_regions(source_a, source_b)) {
-        merge_regions(source_a, source_b, target);
+        update_error |= !oled_draw_cmd_finish();
+
+        oled_draw_cmd_t *tmp = transmit_buffer;
+        transmit_buffer = render_buffer;
+        render_buffer = tmp;
+
+        oled_draw_cmd_start(transmit_buffer, &(display->device));
       }
-      else {
-        break;
+
+      extents_bit <<= 1;
+
+      if (extents_bit == 0)
+      {
+        ++extents_word;
+        extents_bit = 1;
       }
     }
-
-    if ((source_b_idx == source_a_idx + 1) && (target_idx != source_a_idx)) {
-      copy_region(source_a, target);
-    }
-
-    source_a_idx = source_b_idx;
   }
 
-  extents->regions_n = target_idx;
+  update_error |= !oled_draw_cmd_finish();
+
+  if (update_error) {
+    display_force_full_update(display);
+  }
+  else {
+    memcpy(display->previous_extents, display->current_extents, EXTENTS_SIZE);
+  }
+
+  for (uint8_t i = 0; i < display->sprites_n; ++i) {
+    display->sprites[i]->changed = false;
+  }
+}
+
+
+void
+update_extents_reset(update_extents_t extents, bool value)
+{
+  uint8_t fill_byte = (value) ? 0xff : 0x00;
+  memset(extents, fill_byte, EXTENTS_SIZE);
+}
+
+
+#define EXTENTS_BITS_PER_PAGE (OLED_WIDTH / EXTENTS_TILE_WIDTH)
+
+void
+update_extents_add_page(update_extents_t extents, uint8_t page)
+{
+  uint8_t word = page * EXTENTS_BITS_PER_PAGE / 8;
+  memset(&extents[word], 0xff, EXTENTS_BITS_PER_PAGE / 8);
+}
+
+
+void
+update_extents_add_region(update_extents_t extents, uint8_t page, uint8_t start_column, uint8_t end_column)
+{
+  uint8_t start_bit = start_column / EXTENTS_TILE_WIDTH + page * EXTENTS_BITS_PER_PAGE;
+  uint8_t end_bit = end_column / EXTENTS_TILE_WIDTH + page * EXTENTS_BITS_PER_PAGE;
+
+  uint8_t word = start_bit / 8;
+  uint8_t bit = 1 << (start_bit % 8);
+  uint8_t bits_n = end_bit - start_bit + 1;
+
+  for (uint8_t i = 0; i < bits_n; ++i) {
+    extents[word] |= bit;
+    bit <<= 1;
+
+    if (bit == 0) {
+      ++word;
+      bit = 1;
+    }
+  }
 }

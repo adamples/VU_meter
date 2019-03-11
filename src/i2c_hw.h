@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <avr/io.h>
+#include <util/twi.h>
 #include "config.h"
 
 
@@ -74,5 +75,23 @@ i2c_hw_disable_int(void)
   TWCR &= ~_BV(TWIE) & ~_BV(TWINT);
 }
 
+
+#define TW_OK (0xff)
+
+inline uint8_t
+i2c_hw_get_status(void)
+{
+  uint8_t i2c_status = TWSR & TW_STATUS_MASK;
+
+  switch (i2c_status) {
+    case TW_BUS_ERROR:
+    case TW_MT_SLA_NACK:
+    case TW_MT_DATA_NACK:
+    case TW_MT_ARB_LOST:
+      return i2c_status;
+  }
+
+  return TW_OK;
+}
 
 #endif /* I2C_HW_H */

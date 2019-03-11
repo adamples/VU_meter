@@ -12,7 +12,35 @@
 #include "i2c_hw.h"
 
 
-static uint8_t I2C_CURRENT_ADDRESS;
+static uint8_t I2C_STATUS = TW_OK;
+
+#define check_status() do { if (I2C_STATUS != TW_OK) goto finish; } while (0);
+
+
+static void
+i2c_start(void)
+{
+  i2c_hw_send_start_condition();
+  i2c_hw_wait_for_int();
+  I2C_STATUS = i2c_hw_get_status();
+}
+
+
+static void
+i2c_finish(void)
+{
+  i2c_hw_send_stop_condition();
+  i2c_hw_go_idle();
+}
+
+
+static void
+i2c_send_byte(uint8_t data)
+{
+  i2c_hw_send_byte(data);
+  i2c_hw_wait_for_int();
+  I2C_STATUS = i2c_hw_get_status();
+}
 
 
 void i2c_init(void)
@@ -21,86 +49,43 @@ void i2c_init(void)
 }
 
 
-bool
-i2c_is_idle(void)
-{
-  return true;
-}
-
-
-void
+uint8_t
 i2c_wait(void)
 {
-  /* Nothing to do here */
+  return I2C_STATUS;
 }
 
 
 void
-i2c_transmit_async(uint8_t address, i2c_callback_t callback, void *data)
+i2c_transmit(uint16_t length, uint8_t *data)
 {
-  I2C_CURRENT_ADDRESS = address;
-  while (callback(data));
-}
+  i2c_start();
+  check_status()
 
-
-void
-i2c_check_status()
-{
-  uint8_t i2c_status = TWSR & TW_STATUS_MASK;
-
-  if (i2c_status > TW_MT_DATA_ACK || i2c_status == TW_MT_SLA_NACK) {
-    fault(FAULT_I2C, i2c_status, "Error status");
+  for (uint16_t i = 0; i < length; ++i) {
+    i2c_send_byte(data[i]);
+    check_status()
   }
+
+  finish: i2c_finish();
 }
 
 
-void
-i2c_async_send_byte(uint8_t data)
+uint8_t
+i2c_transmit_progmem(uint8_t address, uint16_t length, const uint8_t *data)
 {
-  i2c_hw_send_byte(data);
-  i2c_hw_wait_for_int();
-  i2c_check_status();
-}
+  i2c_start();
+  check_status();
 
-
-void
-i2c_async_send_bytes(uint8_t *data, uint8_t n)
-{
-  assert(n > 0);
-
-  for (uint8_t i = 0; i < n; ++i) {
-    i2c_async_send_byte(data[i]);
-  }
-}
-
-
-void
-i2c_async_send_start(void)
-{
-  i2c_hw_send_start_condition();
-  i2c_hw_wait_for_int();
-  i2c_check_status();
-  i2c_async_send_byte(I2C_CURRENT_ADDRESS);
-}
-
-
-void
-i2c_async_end_transmission(void)
-{
-  i2c_hw_send_stop_condition();
-}
-
-
-void
-i2c_transmit_progmem(uint8_t address, const uint8_t *data, uint16_t length)
-{
-  I2C_CURRENT_ADDRESS = address;
-  i2c_async_send_start();
+  i2c_send_byte(address);
+  check_status()
 
   for (uint16_t i = 0; i < length; ++i) {
     uint8_t byte = pgm_read_byte(data + i);
-    i2c_async_send_byte(byte);
+    i2c_send_byte(byte);
+    check_status()
   }
 
-  i2c_async_end_transmission();
+  finish: i2c_finish();
+  return I2C_STATUS;
 }

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "i2c.h"
 
 #define OLED_COLUMNS_N (128)
 #define OLED_COLUMN_OFFSET (2)
@@ -11,6 +12,11 @@
 
 #define OLED_WIDTH (OLED_COLUMNS_N)
 #define OLED_HEIGHT (OLED_PAGES_N * OLED_PAGE_HEIGHT)
+
+#define OLED_CTRL_COMMAND (0x00)
+#define OLED_CTRL_DATA (0x40)
+#define OLED_CTRL_N_BYTES (0x00)
+#define OLED_CTRL_SINGLE_BYTE (0x80)
 
 #define OLED_CMD_SET_LOW_COLUMN(low) (0x00 | ((low) & 0x0f))
 #define OLED_CMD_SET_HIGH_COLUMN(hi) (0x10 | ((hi) & 0x0f))
@@ -39,31 +45,37 @@
 
 typedef uint8_t oled_segment_t;
 
-typedef enum oled_i2c_mode_t_ {
-  OLED_I2C_MODE_COMMAND = 0x00,
-  OLED_I2C_MODE_DATA = 0x40,
-  OLED_I2C_MODE_NOT_SELECTED = 0xff
-} oled_i2c_mode_t;
-
 typedef struct oled_t_ {
   uint8_t address;
-  uint8_t cursor_column;
-  uint8_t cursor_page;
-  oled_i2c_mode_t i2c_mode;
+  uint8_t column;
+  uint8_t page;
 } oled_t;
 
-typedef bool (*oled_update_callback_t)(void *data);
+
+typedef struct oled_draw_cmd_t_ {
+  uint8_t column;
+  uint8_t page;
+  uint8_t width;
+  uint8_t address;
+  uint8_t ctrl1;
+  uint8_t cmd_high_column;
+  uint8_t ctrl2;
+  uint8_t cmd_low_column;
+  uint8_t ctrl3;
+  uint8_t cmd_page;
+  uint8_t ctrl4;
+  uint8_t gddram_data[OLED_DRAW_BUFFER_SIZE];
+} oled_draw_cmd_t;
 
 
-void oled_init(oled_t *device, uint8_t address);
+void oled_draw_cmd_init(oled_draw_cmd_t *draw);
+void oled_draw_cmd_set_address(oled_draw_cmd_t *draw, uint8_t address);
+void oled_draw_cmd_set_dimensions(oled_draw_cmd_t *draw, uint8_t column, uint8_t page, uint8_t width);
+oled_segment_t *oled_draw_cmd_get_segments(oled_draw_cmd_t *draw);
 
-void oled_start_update(oled_t *device, oled_update_callback_t callback, void *data);
+bool oled_init(oled_t *device, uint8_t address);
 
-void oled_move_to(oled_t *device, uint8_t column, uint8_t page);
-void oled_put_segments(oled_t *device, uint8_t column, uint8_t page,
-                          uint8_t width, uint8_t *segments);
-
-void oled_finish_update(oled_t *device);
-
+void oled_draw_cmd_start(oled_draw_cmd_t *draw, oled_t *device);
+bool oled_draw_cmd_finish();
 
 #endif /* OLED_H */

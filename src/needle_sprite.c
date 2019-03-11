@@ -83,7 +83,9 @@ void
 needle_sprite_init(needle_sprite_t *needle)
 {
   needle->sprite.render = needle_sprite_render_cb;
+  needle->sprite.add_to_extents = (sprite_add_to_extents_t) needle_sprite_add_to_extents;
   needle->sprite.visible = true;
+  needle->sprite.changed = false;
   memset(needle->column, -128, sizeof(needle->column));
 }
 
@@ -146,6 +148,8 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
     }
   }
 
+  needle->sprite.changed = true;
+
 #ifndef NDEBUG
   for (page = 0; page < OLED_PAGES_N; ++page) {
     assert(needle->start_column[page] <= needle->end_column[page]);
@@ -155,7 +159,7 @@ needle_sprite_draw(needle_sprite_t *needle, uint8_t angle)
 
 
 void
-needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t *extents)
+needle_sprite_add_to_extents(needle_sprite_t *needle, update_extents_t extents)
 {
   for (uint8_t page = 0; page < OLED_PAGES_N; ++page) {
     if (needle->start_column[page] == -128) {
