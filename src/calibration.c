@@ -78,7 +78,7 @@ calibration_adc_to_angle(calibration_t *calibration, uint16_t needle)
 bool
 calibration_adc_to_peak(calibration_t *calibration, uint16_t peak)
 {
-  int16_t normalized = peak - 247;
-  int16_t limit = (calibration->needle_ref - calibration->needle_zero) * PEAK_LEVEL_GAIN / 12;
+  int16_t normalized = peak - calibration->peak_zero;
+  int16_t limit = (calibration->peak_ref - calibration->peak_zero) * PEAK_LEVEL;
   return (normalized >= limit);
 }

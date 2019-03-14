@@ -24,8 +24,7 @@ static const uint8_t OLED_INIT_SEQUENCE[] PROGMEM = {
     OLED_CMD_SET_INVERSED(false),
     OLED_CMD_SET_CLOCK_DIVIDE_FREQUENCY, 0xf0,
     OLED_CMD_SET_CONTRAST, 0x00,
-    OLED_CMD_SET_DCDC_CONTROL_MODE, OLED_CMD_SET_DCDC_ON(true),
-    OLED_CMD_SET_DISPLAY_ON(true)
+    OLED_CMD_SET_DCDC_CONTROL_MODE, OLED_CMD_SET_DCDC_ON(true)
 };
 
 
@@ -73,6 +72,20 @@ oled_init(oled_t *device, uint8_t address)
   device->page = 255;
   uint8_t status = i2c_transmit_progmem(address, sizeof(OLED_INIT_SEQUENCE), OLED_INIT_SEQUENCE);
   return (status == TW_OK);
+}
+
+
+void
+oled_set_display_on(oled_t *device, bool enabled)
+{
+  uint8_t OLED_ON_SEQUENCE[] = {
+    device->address,
+    OLED_CTRL_COMMAND | OLED_CTRL_N_BYTES,
+    OLED_CMD_SET_DISPLAY_ON(enabled)
+  };
+
+  i2c_transmit(sizeof(OLED_ON_SEQUENCE), OLED_ON_SEQUENCE);
+  i2c_wait();
 }
 
 

@@ -14,7 +14,7 @@
 
 static uint8_t I2C_STATUS = TW_OK;
 
-#define check_status() do { if (I2C_STATUS != TW_OK) goto finish; } while (0);
+#define check_status() do { if (I2C_STATUS != TW_OK) goto finish; } while (0)
 
 
 static void
@@ -60,11 +60,11 @@ void
 i2c_transmit(uint16_t length, uint8_t *data)
 {
   i2c_start();
-  check_status()
+  check_status();
 
   for (uint16_t i = 0; i < length; ++i) {
     i2c_send_byte(data[i]);
-    check_status()
+    check_status();
   }
 
   finish: i2c_finish();
@@ -78,12 +78,12 @@ i2c_transmit_progmem(uint8_t address, uint16_t length, const uint8_t *data)
   check_status();
 
   i2c_send_byte(address);
-  check_status()
+  check_status();
 
   for (uint16_t i = 0; i < length; ++i) {
     uint8_t byte = pgm_read_byte(data + i);
     i2c_send_byte(byte);
-    check_status()
+    check_status();
   }
 
   finish: i2c_finish();

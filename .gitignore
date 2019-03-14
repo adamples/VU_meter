@@ -2,6 +2,7 @@
 src/background.c
 src/peak_indicator.c
 src/needle_coordinates.c
+src/splash.c
 
 # Build directory
 build/*.o

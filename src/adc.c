@@ -54,3 +54,26 @@ adc_get(adc_data_t *result)
   result->r_needle = adc_sample(ADC_CHANNEL_R_NEEDLE);
   result->r_peak = adc_sample(ADC_CHANNEL_R_PEAK);
 }
+
+
+void
+adc_reset_peak(bool left, bool right)
+{
+  if (left) {
+    DDRC |= _BV(ADC_CHANNEL_L_PEAK);
+    PORTC |= _BV(ADC_CHANNEL_L_PEAK);
+  }
+  else {
+    PORTC &= ~_BV(ADC_CHANNEL_L_PEAK);
+    DDRC &= ~_BV(ADC_CHANNEL_L_PEAK);
+  }
+
+  if (right) {
+    DDRC |= _BV(ADC_CHANNEL_R_PEAK);
+    PORTC |= _BV(ADC_CHANNEL_R_PEAK);
+  }
+  else {
+    PORTC &= ~_BV(ADC_CHANNEL_R_PEAK);
+    DDRC &= ~_BV(ADC_CHANNEL_R_PEAK);
+  }
+}

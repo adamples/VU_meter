@@ -74,6 +74,7 @@ void oled_draw_cmd_set_dimensions(oled_draw_cmd_t *draw, uint8_t column, uint8_t
 oled_segment_t *oled_draw_cmd_get_segments(oled_draw_cmd_t *draw);
 
 bool oled_init(oled_t *device, uint8_t address);
+void oled_set_display_on(oled_t *device, bool enabled);
 
 void oled_draw_cmd_start(oled_draw_cmd_t *draw, oled_t *device);
 bool oled_draw_cmd_finish();

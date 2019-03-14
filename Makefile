@@ -1,12 +1,27 @@
-MCU?=atmega328p
-F_CPU?=16000000
-PROG?=arduino
-AVRDUDE_FLAGS=-P /dev/ttyACM0
-AVRDUDE_FLAGS+=-B1
+BOARD?=VUMETER_V2
+PYTHON?=python
+BUILD?=DEBUG
+
+MCU_VUMETER_V2:=atmega88p
+F_CPU_VUMETER_V2:=20000000
+PROG_VUMETER_V2:=usbasp
+AVRDUDE_FLAGS_VUMETER_V2:=-B1
+
+MCU_ARDUINO_UNO:=atmega328p
+F_CPU_ARDUINO_UNO:=16000000
+PROG_ARDUINO_UNO:=arduino
+AVRDUDE_FLAGS_ARDUINO_UNO:=-P /dev/ttyACM0
+
+
+MCU?=$(MCU_$(BOARD))
+F_CPU?=$(F_CPU_$(BOARD))
+PROG?=$(PROG_$(BOARD))
+AVRDUDE_FLAGS=$(AVRDUDE_FLAGS_$(BOARD))
 
 
 TARGET=main
 SRC_DIR=src
+UTILS_DIR=utils
 BUILD_DIR?=build
 
 
@@ -15,6 +30,7 @@ $(SRC_DIR)/background.c \
 $(SRC_DIR)/background_flipped.c \
 $(SRC_DIR)/peak_indicator.c \
 $(SRC_DIR)/splash.c \
+$(SRC_DIR)/utils.c \
 $(SRC_DIR)/fault.c \
 $(SRC_DIR)/benchmark.c \
 $(SRC_DIR)/ring_buffer.c \
@@ -25,7 +41,6 @@ $(SRC_DIR)/display.c \
 $(SRC_DIR)/progmem_image_sprite.c \
 $(SRC_DIR)/needle_coordinates.c \
 $(SRC_DIR)/needle_sprite.c \
-$(SRC_DIR)/splash_sprite.c \
 $(SRC_DIR)/adc.c \
 $(SRC_DIR)/calibration.c \
 $(SRC_DIR)/$(TARGET).c
@@ -45,20 +60,17 @@ OBJCOPY=avr-objcopy
 OBJDUMP=avr-objdump
 SIZE=avr-size
 RM=rm -f --
-PYTHON?=python
 IMAGE2C=$(PYTHON) $(SRC_DIR)/image2c.py
+EEPROM_UTIL=$(PYTHON) $(UTILS_DIR)/eeprom_util.py
 
 
 CFLAGS+=-mmcu=$(MCU)
 CFLAGS+=-DF_CPU="$(F_CPU)UL"
 
-CFLAGS+=-Os
 CFLAGS+=-MD -MP
 CFLAGS+=-Wall
 CFLAGS+=-Werror
 CFLAGS+=-std=c99
-#~ CFLAGS+=-DNOLOGO
-CFLAGS+=-DNDEBUG
 CFLAGS+=-ffunction-sections -fdata-sections
 CFLAGS+=-funsigned-char -funsigned-bitfields
 CFLAGS+=-fpack-struct -fshort-enums
@@ -66,6 +78,10 @@ CFLAGS+=-frename-registers
 CFLAGS+=-g
 CFLAGS+=-Wa,-ahlmsd=$(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.lst,$<)
 
+CFLAGS_DEBUG=-O1
+CFLAGS_RELEASE=-O2 -DNDEBUG
+
+CFLAGS+=$(CFLAGS_$(BUILD))
 
 LDFLAGS+=-mmcu=$(MCU)
 LDFLAGS+=-static
@@ -75,7 +91,7 @@ LDFLAGS+=-Wl,-gc-sections
 #LDFLAGS += -Wl,-u,vfprintf -lprintf_min
 #LDFLAGS += -Wl,-u,vfprintf -lprintf_flt
 #LDFLAGS+=-g
-LDLIBS+=-lm
+#LDLIBS+=-lm
 
 
 ASFLAGS+=-mmcu=$(MCU)
@@ -126,19 +142,19 @@ summary: $(BUILD_DIR)/$(TARGET)
 	@echo "Summary"
 	@$(SIZE) $(BUILD_DIR)/$(TARGET)
 
-dump_eeprom:
-	avrdude -p $(MCU) -c $(PROG) -U eeprom:r:eeprom.bin:r
-	xxd eeprom.bin
-	$(RM) eeprom.bin
+dump_eeprom: utils/eeprom_util.py
+	avrdude -p $(MCU) -c $(PROG) -U eeprom:r:-:i 2>/dev/null | $(EEPROM_UTIL)
 
-install: $(BUILD_DIR)/$(TARGET).hex
+install: install_fuse_bytes install_flash install_eeprom
+
+install_flash: $(BUILD_DIR)/$(TARGET).hex
 	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U flash:w:$(BUILD_DIR)/$(TARGET).hex
 
 install_eeprom: $(BUILD_DIR)/$(TARGET).eep
 	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U eeprom:w:$(BUILD_DIR)/$(TARGET).eep
 
 install_fuse_bytes:
-	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U lfuse:w:0xe6:m
+	avrdude -p $(MCU) -c $(PROG) -B1000 -U lfuse:w:0xE6:m -U hfuse:w:0xD4:m
 
 
 clean:

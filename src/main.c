@@ -4,7 +4,6 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
-#include <avr/wdt.h>
 #include "config.h"
 #include "utils.h"
 #include "assert.h"
@@ -14,7 +13,6 @@
 #include "display.h"
 #include "progmem_image_sprite.h"
 #include "needle_sprite.h"
-#include "splash_sprite.h"
 #include "benchmark.h"
 #include "adc.h"
 #include "calibration.h"
@@ -22,16 +20,16 @@
 
 calibration_t CALIBRATION_L EEFIXED = {
   .needle_zero = 247,
-  .needle_ref = 428,
+  .needle_ref = 680,
   .peak_zero = 247,
-  .peak_ref = 404
+  .peak_ref = 345
 };
 
 calibration_t CALIBRATION_R EEFIXED = {
   .needle_zero = 247,
-  .needle_ref = 428,
+  .needle_ref = 680,
   .peak_zero = 247,
-  .peak_ref = 404
+  .peak_ref = 345
 };
 
 
@@ -44,31 +42,7 @@ typedef struct vu_meter_t_ {
   needle_sprite_t needle;
   progmem_image_sprite_t peak_indicator;
   uint8_t peak_timer;
-
-  #ifndef NOLOGO
-    splash_sprite_t splash_sprite;
-  #endif
 } vu_meter_t;
-
-
-
-static void
-watchdog_init()
-{
-  MCUSR = 0;
-#ifdef NDEBUG
-  wdt_enable(WDTO_120MS);
-#else
-  wdt_disable();
-#endif
-}
-
-
-#ifdef NDEBUG
-  #define watchdog_reset() wdt_reset()
-#else
-  #define watchdog_reset() do { } while (0)
-#endif
 
 
 void
@@ -79,13 +53,7 @@ vu_meter_init(vu_meter_t *meter, int8_t address, calibration_t *calibration, boo
   eeprom_read_block(&(meter->calibration), calibration, sizeof(calibration_t));
 
   display_init(&(meter->display), address);
-
-  if (flipped) {
-    progmem_image_sprite_init(&(meter->background), BACKGROUND_FLIPPED, 0, 0);
-  }
-  else {
-    progmem_image_sprite_init(&(meter->background), BACKGROUND, 0, 0);
-  }
+  progmem_image_sprite_init(&(meter->background), BACKGROUND, 0, 0);
 
   display_add_sprite(&(meter->display), &(meter->background.sprite));
 
@@ -96,11 +64,6 @@ vu_meter_init(vu_meter_t *meter, int8_t address, calibration_t *calibration, boo
   progmem_image_sprite_init(&(meter->peak_indicator), PEAK_INDICATOR, 107, 7);
   display_add_sprite(&(meter->display), &(meter->peak_indicator).sprite);
   meter->peak_indicator.sprite.visible = false;
-
-  #ifndef NOLOGO
-    splash_sprite_init(&(meter->splash_sprite), SPLASH);
-    display_add_sprite(&(meter->display), &(meter->splash_sprite.sprite));
-  #endif
 }
 
 
@@ -121,25 +84,31 @@ vu_meter_update(vu_meter_t *meter, uint16_t needle_level, uint16_t peak_level)
   if (peak) {
     meter->peak_timer = 10;
   }
-  else if (meter->peak_timer != 0) {
+  else if (meter->peak_timer > 0) {
     --(meter->peak_timer);
   }
 
-  meter->peak_indicator.sprite.visible = (meter->peak_timer > 0);
+  bool new_visible = (meter->peak_timer > 0);
+  meter->peak_indicator.sprite.changed = (meter->peak_indicator.sprite.visible != new_visible);
+  meter->peak_indicator.sprite.visible = new_visible;
 
   needle_sprite_draw(&(meter->needle), angle);
+  display_update(&(meter->display));
+}
 
-  #ifndef NOLOGO
-    splash_sprite_advance(&(meter->splash_sprite));
-  #endif
 
+void vu_meter_splash(vu_meter_t *meter, const uint8_t *image)
+{
+  progmem_image_sprite_init(&(meter->background), image, 0, 0);
+  meter->peak_indicator.sprite.visible = false;
+  meter->needle.sprite.visible = false;
+
+  display_force_full_update(&(meter->display));
   display_update(&(meter->display));
 
-  #ifndef NOLOGO
-    if (splash_sprite_is_finished(&(meter->splash_sprite)) && meter->display.sprites_n == 4) {
-      meter->display.sprites_n = 3;
-    }
-  #endif
+  progmem_image_sprite_init(&(meter->background), BACKGROUND, 0, 0);
+  meter->peak_indicator.sprite.visible = false;
+  meter->needle.sprite.visible = true;
 }
 
 
@@ -157,19 +126,46 @@ int main(void)
 
   watchdog_reset();
 
-  vu_meter_init(&VU_METER_L, DISPLAY_A_ADDRESS, &CALIBRATION_L, true);
-  vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS, &CALIBRATION_R, false);
+  vu_meter_init(&VU_METER_L, DISPLAY_A_ADDRESS, &CALIBRATION_L, DISPLAY_LEFT_FLIPPED);
+  vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS, &CALIBRATION_R, DISPLAY_RIGHT_FLIPPED);
 
+  #if ENABLE_SPLASH_SCREEN
+    vu_meter_splash(&VU_METER_L, SPLASH);
+    vu_meter_splash(&VU_METER_R, SPLASH);
+
+    oled_set_display_on(&(VU_METER_L.display.device), true);
+    oled_set_display_on(&(VU_METER_R.display.device), true);
+
+    delay_ms(SPLASH_SCREEN_TIME_MS);
+
+    oled_set_display_on(&(VU_METER_L.display.device), false);
+    oled_set_display_on(&(VU_METER_R.display.device), false);
+
+    delay_ms(500);
+  #endif
+
+  bool is_on = false;
   adc_data_t adc_data;
 
-  while (1) {
+  for (int16_t i = 0; i < 1000; ++i) {
     watchdog_reset();
 
     adc_get(&adc_data);
+    //~ adc_reset_peak(true, true);
+    //~ adc_reset_peak(false, false);
 
     vu_meter_update(&VU_METER_L, adc_data.l_needle, adc_data.l_peak);
     vu_meter_update(&VU_METER_R, adc_data.r_needle, adc_data.r_peak);
+
+    if (!is_on) {
+      oled_set_display_on(&(VU_METER_L.display.device), true);
+      oled_set_display_on(&(VU_METER_R.display.device), true);
+      is_on = true;
+    }
   }
+
+  oled_set_display_on(&(VU_METER_L.display.device), false);
+  oled_set_display_on(&(VU_METER_R.display.device), false);
 
   while (1);
 }
