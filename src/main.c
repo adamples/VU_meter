@@ -46,14 +46,19 @@ typedef struct vu_meter_t_ {
 
 
 void
-vu_meter_init(vu_meter_t *meter, int8_t address, calibration_t *calibration, bool flipped)
+vu_meter_init(vu_meter_t *meter,
+              int8_t address,
+              calibration_t *calibration,
+              bool flipped,
+              const uint8_t *background_image,
+              const uint8_t *peak_indicator_image)
 {
   meter->flipped = flipped;
   meter->calibration_eeprom = calibration;
   eeprom_read_block(&(meter->calibration), calibration, sizeof(calibration_t));
 
   display_init(&(meter->display), address);
-  progmem_image_sprite_init(&(meter->background), BACKGROUND, 0, 0);
+  progmem_image_sprite_init(&(meter->background), background_image, 0, 0);
 
   display_add_sprite(&(meter->display), &(meter->background.sprite));
 
@@ -61,7 +66,7 @@ vu_meter_init(vu_meter_t *meter, int8_t address, calibration_t *calibration, boo
   needle_sprite_draw(&(meter->needle), 0);
   display_add_sprite(&(meter->display), &(meter->needle).sprite);
 
-  progmem_image_sprite_init(&(meter->peak_indicator), PEAK_INDICATOR, 107, 7);
+  progmem_image_sprite_init(&(meter->peak_indicator), peak_indicator_image, 107, 7);
   display_add_sprite(&(meter->display), &(meter->peak_indicator).sprite);
   meter->peak_indicator.sprite.visible = false;
 }
@@ -99,6 +104,8 @@ vu_meter_update(vu_meter_t *meter, uint16_t needle_level, uint16_t peak_level)
 
 void vu_meter_splash(vu_meter_t *meter, const uint8_t *image)
 {
+  const uint8_t *background_tmp = meter->background.data;
+
   progmem_image_sprite_init(&(meter->background), image, 0, 0);
   meter->peak_indicator.sprite.visible = false;
   meter->needle.sprite.visible = false;
@@ -106,7 +113,7 @@ void vu_meter_splash(vu_meter_t *meter, const uint8_t *image)
   display_force_full_update(&(meter->display));
   display_update(&(meter->display));
 
-  progmem_image_sprite_init(&(meter->background), BACKGROUND, 0, 0);
+  progmem_image_sprite_init(&(meter->background), background_tmp, 0, 0);
   meter->peak_indicator.sprite.visible = false;
   meter->needle.sprite.visible = true;
 }
@@ -126,12 +133,27 @@ int main(void)
 
   watchdog_reset();
 
-  vu_meter_init(&VU_METER_L, DISPLAY_A_ADDRESS, &CALIBRATION_L, DISPLAY_LEFT_FLIPPED);
-  vu_meter_init(&VU_METER_R, DISPLAY_B_ADDRESS, &CALIBRATION_R, DISPLAY_RIGHT_FLIPPED);
+  vu_meter_init(
+    &VU_METER_L,
+    DISPLAY_LEFT_ADDRESS,
+    &CALIBRATION_L,
+    DISPLAY_LEFT_FLIPPED,
+    DISPLAY_LEFT_BACKGROUND,
+    DISPLAY_LEFT_PEAK_INDICATOR
+  );
+
+  vu_meter_init(
+    &VU_METER_R,
+    DISPLAY_RIGHT_ADDRESS,
+    &CALIBRATION_R,
+    DISPLAY_RIGHT_FLIPPED,
+    DISPLAY_RIGHT_BACKGROUND,
+    DISPLAY_RIGHT_PEAK_INDICATOR
+  );
 
   #if ENABLE_SPLASH_SCREEN
-    vu_meter_splash(&VU_METER_L, SPLASH);
-    vu_meter_splash(&VU_METER_R, SPLASH);
+    vu_meter_splash(&VU_METER_L, DISPLAY_LEFT_SPLASH);
+    vu_meter_splash(&VU_METER_R, DISPLAY_RIGHT_SPLASH);
 
     oled_set_display_on(&(VU_METER_L.display.device), true);
     oled_set_display_on(&(VU_METER_R.display.device), true);
@@ -140,32 +162,30 @@ int main(void)
 
     oled_set_display_on(&(VU_METER_L.display.device), false);
     oled_set_display_on(&(VU_METER_R.display.device), false);
-
-    delay_ms(500);
   #endif
 
   bool is_on = false;
   adc_data_t adc_data;
 
-  for (int16_t i = 0; i < 1000; ++i) {
+  for (int i = 0; true; ++i) {
     watchdog_reset();
 
     adc_get(&adc_data);
-    //~ adc_reset_peak(true, true);
-    //~ adc_reset_peak(false, false);
+
+    if (i % 10 == 0) {
+      adc_reset_peak(true, true);
+      adc_reset_peak(false, false);
+    }
 
     vu_meter_update(&VU_METER_L, adc_data.l_needle, adc_data.l_peak);
     vu_meter_update(&VU_METER_R, adc_data.r_needle, adc_data.r_peak);
 
-    if (!is_on) {
+    if (!is_on && i > BLANK_TIME_FRAMES) {
       oled_set_display_on(&(VU_METER_L.display.device), true);
       oled_set_display_on(&(VU_METER_R.display.device), true);
       is_on = true;
     }
   }
-
-  oled_set_display_on(&(VU_METER_L.display.device), false);
-  oled_set_display_on(&(VU_METER_R.display.device), false);
 
   while (1);
 }

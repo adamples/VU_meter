@@ -4,9 +4,12 @@
 #include <stdint.h>
 
 
-extern const uint8_t BACKGROUND[1026];
-extern const uint8_t BACKGROUND_FLIPPED[1026];
-extern const uint8_t PEAK_INDICATOR[23];
-extern const uint8_t SPLASH[1026];
+extern const uint8_t DISPLAY_LEFT_BACKGROUND[];
+extern const uint8_t DISPLAY_LEFT_PEAK_INDICATOR[];
+extern const uint8_t DISPLAY_LEFT_SPLASH[];
+
+extern const uint8_t DISPLAY_RIGHT_BACKGROUND[];
+extern const uint8_t DISPLAY_RIGHT_PEAK_INDICATOR[];
+extern const uint8_t DISPLAY_RIGHT_SPLASH[];
 
 #endif

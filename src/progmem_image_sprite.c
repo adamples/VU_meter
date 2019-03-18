@@ -22,7 +22,7 @@ progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, ui
   int8_t source_column_a = target_column_a - image->column;
   int8_t source_page = page - image->page;
 
-  const uint8_t *source = image->data + source_column_a + source_page * image->width;
+  const uint8_t *source = image->data + 2 + source_column_a + source_page * image->width;
   oled_segment_t *target = segments + target_column_a - column_a;
 
   for (uint8_t i = target_column_a; i <= target_column_b; ++i) {
@@ -44,7 +44,7 @@ progmem_image_sprite_init(progmem_image_sprite_t *image, const uint8_t *data, ui
   image->page = page;
   image->width = pgm_read_byte(data);
   image->height = pgm_read_byte(data + 1) / OLED_PAGE_HEIGHT;
-  image->data = data + 2;
+  image->data = data;
 }
 
 

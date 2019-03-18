@@ -2,9 +2,9 @@
 #define NEEDLE_COORDINATES_H
 
 #include <stdint.h>
-#include "config.h"
 
 
+#define NEEDLE_RESOLUTION (128)
 #define NEEDLE_AXIS_X (64)
 #define NEEDLE_AXIS_Y (96)
 

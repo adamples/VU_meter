@@ -7,6 +7,8 @@
 #define ZERO_CALIBRATION_ACTIVE() ((CALIBRATION_ZERO_PIN & _BV(CALIBRATION_ZERO_P)) == 0)
 #define REF_CALIBRATION_ACTIVE() ((CALIBRATION_REF_PIN & _BV(CALIBRATION_REF_P)) == 0)
 
+static bool EEPROM_SAVE_PENDING = false;
+
 
 void
 calibration_init()
@@ -20,14 +22,14 @@ calibration_init()
 static bool
 calibration_is_ref_too_low(calibration_t *calibration)
 {
-  return (calibration->needle_ref < calibration->needle_zero + 90);
+  return (calibration->needle_ref < calibration->needle_zero + 400);
 }
 
 
 static bool
 calibration_is_ref_too_high(calibration_t *calibration)
 {
-  return (calibration->needle_ref > 1020);
+  return (calibration->needle_ref > calibration->needle_zero + 500);
 }
 
 
@@ -36,17 +38,19 @@ calibration_run(calibration_t *calibration, calibration_t *eeprom, uint16_t need
 {
   if (ZERO_CALIBRATION_ACTIVE()) {
     /* Run zero calibration */
-    calibration->needle_zero = needle;
-    calibration->peak_zero = peak;
-
-    eeprom_update_block(calibration, eeprom, sizeof(calibration_t));
+    calibration->needle_zero = (calibration->needle_zero + needle) / 2;
+    calibration->peak_zero = (calibration->peak_zero + peak) / 2;
+    EEPROM_SAVE_PENDING = true;
   }
   else if (REF_CALIBRATION_ACTIVE()) {
     /* Run reference point calibration */
-    calibration->needle_ref = needle;
-    calibration->peak_ref = peak;
-
+    calibration->needle_ref = (calibration->needle_ref + needle) / 2;
+    calibration->peak_ref = (calibration->peak_ref + peak) / 2;
+    EEPROM_SAVE_PENDING = true;
+  }
+  else if (EEPROM_SAVE_PENDING) {
     eeprom_update_block(calibration, eeprom, sizeof(calibration_t));
+    EEPROM_SAVE_PENDING = false;
   }
 }
 

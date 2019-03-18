@@ -197,7 +197,7 @@ def dither(source, target, algo='floyd-steinberg', inverted=False):
 
 input_path = sys.argv[1]
 output_path = sys.argv[2]
-name = sys.argv[3]
+name = sys.argv[3].upper()
 
 if len(sys.argv) == 5:
   inverted = sys.argv[4] == 'inverted'
