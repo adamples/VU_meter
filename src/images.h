@@ -7,9 +7,11 @@
 extern const uint8_t DISPLAY_LEFT_BACKGROUND[];
 extern const uint8_t DISPLAY_LEFT_PEAK_INDICATOR[];
 extern const uint8_t DISPLAY_LEFT_SPLASH[];
+extern const uint8_t DISPLAY_LEFT_WATERMARK[];
 
 extern const uint8_t DISPLAY_RIGHT_BACKGROUND[];
 extern const uint8_t DISPLAY_RIGHT_PEAK_INDICATOR[];
 extern const uint8_t DISPLAY_RIGHT_SPLASH[];
+extern const uint8_t DISPLAY_RIGHT_WATERMARK[];
 
 #endif

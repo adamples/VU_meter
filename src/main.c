@@ -18,14 +18,14 @@
 #include "calibration.h"
 
 
-calibration_t CALIBRATION_L EEFIXED = {
+calibration_data_t CALIBRATION_LEFT EEFIXED = {
   .needle_zero = 247,
   .needle_ref = 680,
   .peak_zero = 247,
   .peak_ref = 345
 };
 
-calibration_t CALIBRATION_R EEFIXED = {
+calibration_data_t CALIBRATION_RIGHT EEFIXED = {
   .needle_zero = 247,
   .needle_ref = 680,
   .peak_zero = 247,
@@ -36,11 +36,13 @@ calibration_t CALIBRATION_R EEFIXED = {
 typedef struct vu_meter_t_ {
   display_t display;
   calibration_t calibration;
-  calibration_t *calibration_eeprom;
   bool flipped;
   progmem_image_sprite_t background;
   needle_sprite_t needle;
   progmem_image_sprite_t peak_indicator;
+#if ENABLE_WATERMARK
+  progmem_image_sprite_t watermark;
+#endif
   uint8_t peak_timer;
 } vu_meter_t;
 
@@ -48,14 +50,18 @@ typedef struct vu_meter_t_ {
 void
 vu_meter_init(vu_meter_t *meter,
               int8_t address,
-              calibration_t *calibration,
+              calibration_data_t *calibration_eeprom,
               bool flipped,
               const uint8_t *background_image,
-              const uint8_t *peak_indicator_image)
+              const uint8_t *peak_indicator_image
+#if ENABLE_WATERMARK
+              , const uint8_t *watermark_image
+#endif
+              )
 {
   meter->flipped = flipped;
-  meter->calibration_eeprom = calibration;
-  eeprom_read_block(&(meter->calibration), calibration, sizeof(calibration_t));
+
+  calibration_init(&(meter->calibration), calibration_eeprom);
 
   display_init(&(meter->display), address);
   progmem_image_sprite_init(&(meter->background), background_image, 0, 0);
@@ -64,11 +70,28 @@ vu_meter_init(vu_meter_t *meter,
 
   needle_sprite_init(&(meter->needle));
   needle_sprite_draw(&(meter->needle), 0);
-  display_add_sprite(&(meter->display), &(meter->needle).sprite);
+  display_add_sprite(&(meter->display), &(meter->needle.sprite));
 
-  progmem_image_sprite_init(&(meter->peak_indicator), peak_indicator_image, 107, 7);
-  display_add_sprite(&(meter->display), &(meter->peak_indicator).sprite);
+  progmem_image_sprite_init(
+    &(meter->peak_indicator),
+    peak_indicator_image,
+    PEAK_POSITION_X,
+    PEAK_POSITION_Y
+  );
+
+  display_add_sprite(&(meter->display), &(meter->peak_indicator.sprite));
   meter->peak_indicator.sprite.visible = false;
+
+#if ENABLE_WATERMARK
+  progmem_image_sprite_init(
+    &(meter->watermark),
+    watermark_image,
+    WATERMARK_POSITION_X,
+    WATERMARK_POSITION_Y
+  );
+
+  display_add_sprite(&(meter->display), &(meter->watermark.sprite));
+#endif
 }
 
 
@@ -76,11 +99,21 @@ void
 vu_meter_update(vu_meter_t *meter, uint16_t needle_level, uint16_t peak_level)
 {
   #if INCLUDE_CALIBRATION
-    calibration_run(&(meter->calibration), meter->calibration_eeprom, needle_level, peak_level);
+    calibration_run(
+      &(meter->calibration),
+      needle_level,
+      peak_level
+    );
   #endif
 
   uint8_t angle = calibration_adc_to_angle(&(meter->calibration), needle_level);
-  bool peak = calibration_adc_to_peak(&(meter->calibration), peak_level);
+  bool peak;
+
+#if PEAK_IS_ZERO_VU
+  peak = (angle > NEEDLE_ZERO_VU_ANGLE);
+#else
+  peak = calibration_adc_to_peak(&(meter->calibration), peak_level);
+#endif
 
   if (meter->flipped) {
     angle = 255 - angle;
@@ -105,17 +138,16 @@ vu_meter_update(vu_meter_t *meter, uint16_t needle_level, uint16_t peak_level)
 void vu_meter_splash(vu_meter_t *meter, const uint8_t *image)
 {
   const uint8_t *background_tmp = meter->background.data;
+  uint8_t sprites_n = meter->display.sprites_n;
 
   progmem_image_sprite_init(&(meter->background), image, 0, 0);
-  meter->peak_indicator.sprite.visible = false;
-  meter->needle.sprite.visible = false;
+  meter->display.sprites_n = 1;
 
   display_force_full_update(&(meter->display));
   display_update(&(meter->display));
 
   progmem_image_sprite_init(&(meter->background), background_tmp, 0, 0);
-  meter->peak_indicator.sprite.visible = false;
-  meter->needle.sprite.visible = true;
+  meter->display.sprites_n = sprites_n;
 }
 
 
@@ -128,7 +160,7 @@ int main(void)
   watchdog_init();
   i2c_init();
   adc_init();
-  calibration_init();
+  calibration_hw_init();
   sei();
 
   watchdog_reset();
@@ -136,19 +168,25 @@ int main(void)
   vu_meter_init(
     &VU_METER_L,
     DISPLAY_LEFT_ADDRESS,
-    &CALIBRATION_L,
+    &CALIBRATION_LEFT,
     DISPLAY_LEFT_FLIPPED,
     DISPLAY_LEFT_BACKGROUND,
     DISPLAY_LEFT_PEAK_INDICATOR
+#if ENABLE_WATERMARK
+    , DISPLAY_LEFT_WATERMARK
+#endif
   );
 
   vu_meter_init(
     &VU_METER_R,
     DISPLAY_RIGHT_ADDRESS,
-    &CALIBRATION_R,
+    &CALIBRATION_RIGHT,
     DISPLAY_RIGHT_FLIPPED,
     DISPLAY_RIGHT_BACKGROUND,
     DISPLAY_RIGHT_PEAK_INDICATOR
+#if ENABLE_WATERMARK
+    , DISPLAY_RIGHT_WATERMARK
+#endif
   );
 
   #if ENABLE_SPLASH_SCREEN

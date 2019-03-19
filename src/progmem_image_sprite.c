@@ -18,7 +18,7 @@ progmem_image_sprite_render(sprite_t *sprite, uint8_t column_a, uint8_t page, ui
   }
 
   int8_t target_column_a = int_max(column_a, image->column);
-  int8_t target_column_b = int_min(column_b, image->column + image->width);
+  int8_t target_column_b = int_min(column_b, image->column + image->width - 1);
   int8_t source_column_a = target_column_a - image->column;
   int8_t source_page = page - image->page;
 
