@@ -1,11 +1,1 @@
-# Build directory
-build/*.c
-build/*.o
-build/*.d
-build/*.lst
-build/*.map
-build/*.hex
-build/*.eep
-build/main
-
 *.geany

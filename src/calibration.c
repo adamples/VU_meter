@@ -6,7 +6,7 @@
 
 #define ZERO_CALIBRATION_ACTIVE() ((CALIBRATION_ZERO_PIN & _BV(CALIBRATION_ZERO_P)) == 0)
 #define REF_CALIBRATION_ACTIVE() ((CALIBRATION_REF_PIN & _BV(CALIBRATION_REF_P)) == 0)
-
+#define FACTORY_RESET_ACTIVE() ((CALIBRATION_RESET_PIN & _BV(CALIBRATION_RESET_P)) == 0)
 
 void
 calibration_hw_init()
@@ -14,21 +14,31 @@ calibration_hw_init()
   /* Enable pull-ups */
   CALIBRATION_ZERO_PORT |= _BV(CALIBRATION_ZERO_P);
   CALIBRATION_REF_PORT |= _BV(CALIBRATION_REF_P);
+  CALIBRATION_RESET_PORT |= _BV(CALIBRATION_RESET_P);
 }
 
 
 void
 calibration_init(calibration_t *calibration, calibration_data_t *eeprom)
 {
-  calibration->eeprom_write_pending = false;
+  const calibration_data_t FACTORY_CALIBRATION = CALIBRATION_INITIALIZER;
+
   calibration->eeprom = eeprom;
 
-  // TODO: reset to factory defaults
-  eeprom_read_block(
-    &(calibration->runtime),
-    calibration->eeprom,
-    sizeof(calibration_data_t)
-  );
+  if (FACTORY_RESET_ACTIVE())
+  {
+    calibration->runtime = FACTORY_CALIBRATION;
+    calibration->eeprom_write_pending = true;
+  }
+  else
+  {
+    eeprom_read_block(
+      &(calibration->runtime),
+      calibration->eeprom,
+      sizeof(calibration_data_t)
+    );
+    calibration->eeprom_write_pending = false;
+  }
 }
 
 

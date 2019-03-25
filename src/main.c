@@ -18,19 +18,9 @@
 #include "calibration.h"
 
 
-calibration_data_t CALIBRATION_LEFT EEFIXED = {
-  .needle_zero = 247,
-  .needle_ref = 680,
-  .peak_zero = 247,
-  .peak_ref = 345
-};
+calibration_data_t CALIBRATION_LEFT EEFIXED = CALIBRATION_INITIALIZER;
 
-calibration_data_t CALIBRATION_RIGHT EEFIXED = {
-  .needle_zero = 247,
-  .needle_ref = 680,
-  .peak_zero = 247,
-  .peak_ref = 345
-};
+calibration_data_t CALIBRATION_RIGHT EEFIXED = CALIBRATION_INITIALIZER;
 
 
 typedef struct vu_meter_t_ {

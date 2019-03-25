@@ -6,7 +6,7 @@
 #include <avr/wdt.h>
 
 #ifndef NDEBUG
-#include <util/delay.h>
+#include "utils.h"
 
 static fault_code_t FAULT_CODE EEMEM;
 static uint16_t FAULT_EXTENDED_STATUS EEMEM;
@@ -30,9 +30,9 @@ debug_fault(fault_code_t code, uint16_t extended_status, const char *error_text)
 
   while (1) {
     PORTB |= _BV(PB5);
-    _delay_ms(500);
+    delay_ms(500);
     PORTB &= ~_BV(PB5);
-    _delay_ms(500);
+    delay_ms(500);
   }
 }
 

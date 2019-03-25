@@ -1,14 +1,15 @@
 # Basic configuration
-BOARD?=VUMETER_WZ10
+BOARD?=WZ10
 PYTHON?=python
 BUILD?=RELEASE
+MOD?=DEFAULT
 
 
 # Board-specific configuration
-MCU_VUMETER_WZ10:=atmega88p
-F_CPU_VUMETER_WZ10:=20000000
-PROG_VUMETER_WZ10:=usbasp
-AVRDUDE_FLAGS_VUMETER_WZ10:=-B1
+MCU_WZ10:=atmega88p
+F_CPU_WZ10:=20000000
+PROG_WZ10:=usbasp
+AVRDUDE_FLAGS_WZ10:=-B1
 
 MCU_ARDUINO_UNO:=atmega328p
 F_CPU_ARDUINO_UNO:=16000000
@@ -39,17 +40,17 @@ CALCULATE_NEEDLE_COORDINATES=$(UTILS_DIR)/calculate_needle_coordinates.py
 # Directories
 TARGET=main
 SRC_DIR=src
-IMAGES_DIR=src/images
 UTILS_DIR=utils
-BUILD_DIR?=build
+BUILD_DIR?=build/$(BUILD)
 
+ifeq "$(MOD)" "DEFAULT"
+IMAGES_DIR=src/images/
+else
+IMAGES_DIR=src/mods/$(MOD)/
+endif
 
 # Sources and object files
 C_SRC= \
-$(SRC_DIR)/background.c \
-$(SRC_DIR)/background_flipped.c \
-$(SRC_DIR)/peak_indicator.c \
-$(SRC_DIR)/splash.c \
 $(SRC_DIR)/utils.c \
 $(SRC_DIR)/fault.c \
 $(SRC_DIR)/benchmark.c \
@@ -88,6 +89,10 @@ CFLAGS+=-fpack-struct -fshort-enums
 CFLAGS+=-frename-registers
 CFLAGS+=-g
 CFLAGS+=-Wa,-ahlmsd=$(@:.o=.lst)
+
+ifneq "$(MOD)" "DEFAULT"
+CFLAGS+=-include src/mods/$(MOD)/config.h
+endif
 
 CFLAGS_DEBUG=-O0
 CFLAGS_RELEASE=-O2 -DNDEBUG
@@ -167,14 +172,13 @@ install_fuse_bytes:
 
 clean:
 	$(RM) $(BUILD_DIR)/$(TARGET)
-	$(RM) $(OBJS)
-	$(RM) $(OBJS:.o=.map)
-	$(RM) $(OBJS:.o=.d)
-	$(RM) $(OBJS:.o=.lst)
-	$(RM) $(BUILD_DIR)/map.map
-	$(RM) $(BUILD_DIR)/$(TARGET).hex
-	$(RM) $(BUILD_DIR)/$(TARGET).eep
-	$(RM) $(IMAGE_SRC)
+	$(RM) $(BUILD_DIR)/*.c
+	$(RM) $(BUILD_DIR)/*.o
+	$(RM) $(BUILD_DIR)/*.d
+	$(RM) $(BUILD_DIR)/*.lst
+	$(RM) $(BUILD_DIR)/*.map
+	$(RM) $(BUILD_DIR)/*.hex
+	$(RM) $(BUILD_DIR)/*.eep
 
 .PHONY: all summary install_fuse_bytes install clean dump_eeprom
 

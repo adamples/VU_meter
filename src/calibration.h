@@ -12,6 +12,13 @@ typedef struct calibration_data_t_ {
   uint16_t peak_ref;
 } calibration_data_t;
 
+#define CALIBRATION_INITIALIZER { \
+  .needle_zero = 247, \
+  .needle_ref = 680, \
+  .peak_zero = 247, \
+  .peak_ref = 345 \
+}
+
 typedef struct calibration_t_ {
   calibration_data_t runtime;
   calibration_data_t *eeprom;
