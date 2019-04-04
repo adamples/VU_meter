@@ -151,6 +151,9 @@ int main(void)
   i2c_init();
   adc_init();
   calibration_hw_init();
+#ifdef OLED_INCLUDE_RESET
+  oled_reset();
+#endif
   sei();
 
   watchdog_reset();

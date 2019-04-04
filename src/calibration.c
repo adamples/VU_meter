@@ -6,7 +6,12 @@
 
 #define ZERO_CALIBRATION_ACTIVE() ((CALIBRATION_ZERO_PIN & _BV(CALIBRATION_ZERO_P)) == 0)
 #define REF_CALIBRATION_ACTIVE() ((CALIBRATION_REF_PIN & _BV(CALIBRATION_REF_P)) == 0)
+
+#if OLED_INCLUDE_RESET
+#define FACTORY_RESET_ACTIVE() (false)
+#else
 #define FACTORY_RESET_ACTIVE() ((CALIBRATION_RESET_PIN & _BV(CALIBRATION_RESET_P)) == 0)
+#endif
 
 void
 calibration_hw_init()
@@ -14,7 +19,9 @@ calibration_hw_init()
   /* Enable pull-ups */
   CALIBRATION_ZERO_PORT |= _BV(CALIBRATION_ZERO_P);
   CALIBRATION_REF_PORT |= _BV(CALIBRATION_REF_P);
+#if !OLED_INCLUDE_RESET
   CALIBRATION_RESET_PORT |= _BV(CALIBRATION_RESET_P);
+#endif
 }
 
 
@@ -24,10 +31,11 @@ calibration_init(calibration_t *calibration, calibration_data_t *eeprom)
   const calibration_data_t FACTORY_CALIBRATION = CALIBRATION_INITIALIZER;
 
   calibration->eeprom = eeprom;
+  calibration->runtime = FACTORY_CALIBRATION;
 
+#if INCLUDE_CALIBRATION
   if (FACTORY_RESET_ACTIVE())
   {
-    calibration->runtime = FACTORY_CALIBRATION;
     calibration->eeprom_write_pending = true;
   }
   else
@@ -39,8 +47,11 @@ calibration_init(calibration_t *calibration, calibration_data_t *eeprom)
     );
     calibration->eeprom_write_pending = false;
   }
+#endif
 }
 
+
+#if INCLUDE_CALIBRATION
 
 static bool
 calibration_is_ref_too_low(calibration_t *calibration)
@@ -85,10 +96,13 @@ calibration_run(calibration_t *calibration, uint16_t needle, uint16_t peak)
   }
 }
 
+#endif
+
 
 uint8_t
 calibration_adc_to_angle(calibration_t *calibration, uint16_t needle)
 {
+#if INCLUDE_CALIBRATION
   if (REF_CALIBRATION_ACTIVE()) {
     if (calibration_is_ref_too_low(calibration)) {
       return 32;
@@ -99,6 +113,7 @@ calibration_adc_to_angle(calibration_t *calibration, uint16_t needle)
 
     return 128;
   }
+#endif
 
   int16_t normalized = ((int32_t) needle - calibration->runtime.needle_zero) *
     (NEEDLE_ZERO_VU_ANGLE - NEEDLE_MIN_ANGLE) / (calibration->runtime.needle_ref - calibration->runtime.needle_zero) + NEEDLE_MIN_ANGLE;
