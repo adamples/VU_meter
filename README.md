@@ -38,8 +38,9 @@ __Note: This is Work In Progress design. To make it work for you you'll most pro
 ## Hardware Design
 
 If you would like to make VU meter yourself here are some useful files for you:
-  - [hardware/vu_meter_2.sch](hardware/vu_meter_2.sch) — schematic (in Eagle 8 format)
-  - [hardware/vu_meter_2.brd](hardware/vu_meter_2.brd) — PCB design (in Eagle 8 format)
+  - [hardware/vu_meter.sch](hardware/vu_meter.sch) — schematic (in Eagle 8 format)
+  - [hardware/vu_meter.brd](hardware/vu_meter.brd) — PCB design (in Eagle 8 format)
+  - [hardware/vu_meter_sch.pdf](hardware/vu_meter_sch.pdf) — schematic as PDF
   - [hardware/bom.ods](hardware/bom.ods) — bill of materials (open document)
   - [hardware/vu_meter.zip](hardware/vu_meter.zip) — gerber files ready for production
 
