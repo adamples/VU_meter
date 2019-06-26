@@ -32,6 +32,7 @@ calibration_init(calibration_t *calibration, calibration_data_t *eeprom)
 
   calibration->eeprom = eeprom;
   calibration->runtime = FACTORY_CALIBRATION;
+  calibration->eeprom_write_pending = false;
 
 #if INCLUDE_CALIBRATION
   if (FACTORY_RESET_ACTIVE())
@@ -45,7 +46,13 @@ calibration_init(calibration_t *calibration, calibration_data_t *eeprom)
       calibration->eeprom,
       sizeof(calibration_data_t)
     );
-    calibration->eeprom_write_pending = false;
+
+    // Check if calibration data read from eeprom is valid
+    if (calibration->runtime.is_valid != VALID_CALIBRATION)
+    {
+      calibration->runtime = FACTORY_CALIBRATION;
+      calibration->eeprom_write_pending = true;
+    }
   }
 #endif
 }

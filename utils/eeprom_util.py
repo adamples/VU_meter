@@ -127,34 +127,41 @@ class IHex(object):
 class Calibration(object):
 
     OFFSET = 0x80
-    SIZE = 0x08
+    SIZE = 0x0a
 
     REF_VOLTAGE = 3.3
 
-    def __init__(self, needle_zero, needle_ref, peak_zero, peak_ref):
+    def __init__(self, needle_zero, needle_ref, peak_zero, peak_ref, is_valid):
         self.needle_zero = needle_zero
         self.needle_ref = needle_ref
         self.peak_zero = peak_zero
         self.peak_ref = peak_ref
+        self.is_valid = is_valid
 
     @classmethod
     def to_v(cls, x):
         return cls.REF_VOLTAGE * x / 1024.0
 
     def __str__(self):
-        return "needle: %d/%d %0.2fV+%0.2fV; peak: %d/%d %0.2fV+%0.2fV" % (
+        if self.is_valid == 0xdead:
+            is_valid_str = "(valid)"
+        else:
+            is_valid_str = "(invalid)"
+
+        return "needle: %d/%d %0.2fV+%0.2fV; peak: %d/%d %0.2fV+%0.2fV %s" % (
             self.needle_ref, self.needle_zero,
             self.to_v(self.needle_zero), self.to_v(self.needle_ref - self.needle_zero),
             self.peak_ref, self.peak_zero,
-            self.to_v(self.peak_zero), self.to_v(self.peak_ref - self.peak_zero))
+            self.to_v(self.peak_zero), self.to_v(self.peak_ref - self.peak_zero),
+            is_valid_str)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, str(self))
 
     @classmethod
     def parse_binary_data(cls, buf):
-        needle_zero, needle_ref, peak_zero, peak_ref = struct.unpack('<HHHH', buf)
-        return cls(needle_zero, needle_ref, peak_zero, peak_ref)
+        needle_zero, needle_ref, peak_zero, peak_ref, is_valid = struct.unpack('<HHHHH', buf)
+        return cls(needle_zero, needle_ref, peak_zero, peak_ref, is_valid)
 
 
 class Fault(object):
