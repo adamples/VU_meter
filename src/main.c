@@ -57,6 +57,17 @@ vu_meter_init(vu_meter_t *meter,
 
   display_add_sprite(&(meter->display), &(meter->background.sprite));
 
+#if ENABLE_WATERMARK
+  progmem_image_sprite_init(
+    &(meter->watermark),
+    watermark_image,
+    WATERMARK_POSITION_X,
+    WATERMARK_POSITION_Y
+  );
+
+  display_add_sprite(&(meter->display), &(meter->watermark.sprite));
+#endif
+
   needle_sprite_init(&(meter->needle));
   needle_sprite_draw(&(meter->needle), 0);
   display_add_sprite(&(meter->display), &(meter->needle.sprite));
@@ -70,17 +81,6 @@ vu_meter_init(vu_meter_t *meter,
 
   display_add_sprite(&(meter->display), &(meter->peak_indicator.sprite));
   meter->peak_indicator.sprite.visible = false;
-
-#if ENABLE_WATERMARK
-  progmem_image_sprite_init(
-    &(meter->watermark),
-    watermark_image,
-    WATERMARK_POSITION_X,
-    WATERMARK_POSITION_Y
-  );
-
-  display_add_sprite(&(meter->display), &(meter->watermark.sprite));
-#endif
 }
 
 

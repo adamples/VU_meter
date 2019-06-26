@@ -157,7 +157,7 @@ summary: $(BUILD_DIR)/$(TARGET)
 	@$(SIZE) $(BUILD_DIR)/$(TARGET)
 
 dump_eeprom: utils/eeprom_util.py
-	avrdude -p $(MCU) -c $(PROG) -U eeprom:r:-:i 2>/dev/null | $(PYTHON) $(EEPROM_UTIL)
+	avrdude -p $(MCU) -c $(PROG) $(AVRDUDE_FLAGS) -U eeprom:r:-:i 2>/dev/null | $(PYTHON) $(EEPROM_UTIL)
 
 install: install_fuse_bytes install_flash install_eeprom
 
