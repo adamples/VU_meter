@@ -19,7 +19,6 @@
 
 
 calibration_data_t CALIBRATION_LEFT EEFIXED = CALIBRATION_INITIALIZER;
-
 calibration_data_t CALIBRATION_RIGHT EEFIXED = CALIBRATION_INITIALIZER;
 
 
@@ -151,7 +150,7 @@ int main(void)
   i2c_init();
   adc_init();
   calibration_hw_init();
-#ifdef OLED_INCLUDE_RESET
+#if OLED_INCLUDE_RESET
   oled_reset();
 #endif
   sei();
