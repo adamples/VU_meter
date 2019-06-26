@@ -41,9 +41,14 @@ mkdir -p -- "VU_meter_v${VERSION}/SSD1306/"
         sed -i 'src/config.h' -e 's/OLED_DRIVER ([^)]\+)/OLED_DRIVER (OLED_DRIVER_'"${DRIVER}"')/'
         make -j8
         cp 'build/RELEASE/main.hex' 'utils/VU_meter_v'"${VERSION}"'/'"${DRIVER}"'/mega328p_16Mhz.hex'
-
-        cp -R 'hardware/' 'utils/VU_meter_v'"${VERSION}"
     done
+
+    cp -R 'hardware/' 'utils/VU_meter_v'"${VERSION}"
+    cp -R 'src/' 'utils/VU_meter_v'"${VERSION}"
+    cp -R 'images/' 'utils/VU_meter_v'"${VERSION}"
+    cp 'README.md' 'utils/VU_meter_v'"${VERSION}"
+    cp 'LICENSE' 'utils/VU_meter_v'"${VERSION}"
+
 )
 
 zip -r9 "VU_meter_v${VERSION}.zip" "VU_meter_v${VERSION}"
