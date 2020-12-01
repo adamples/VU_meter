@@ -68,18 +68,18 @@ vu_meter_init(vu_meter_t *meter,
   display_add_sprite(&(meter->display), &(meter->watermark.sprite));
 #endif
 
-  needle_sprite_init(&(meter->needle));
-  needle_sprite_draw(&(meter->needle), 0);
-  display_add_sprite(&(meter->display), &(meter->needle.sprite));
-
   progmem_image_sprite_init(
     &(meter->peak_indicator),
     peak_indicator_image,
     PEAK_POSITION_X,
     PEAK_POSITION_Y
   );
-
   display_add_sprite(&(meter->display), &(meter->peak_indicator.sprite));
+
+  needle_sprite_init(&(meter->needle));
+  needle_sprite_draw(&(meter->needle), 0);
+  display_add_sprite(&(meter->display), &(meter->needle.sprite));
+
   meter->peak_indicator.sprite.visible = false;
 }
 
